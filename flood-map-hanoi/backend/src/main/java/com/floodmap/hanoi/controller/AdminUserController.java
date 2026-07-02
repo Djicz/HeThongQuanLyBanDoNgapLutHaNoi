@@ -4,11 +4,10 @@ import com.floodmap.hanoi.dto.MessageResponse;
 import com.floodmap.hanoi.model.Role;
 import com.floodmap.hanoi.model.User;
 import com.floodmap.hanoi.model.UserStatus;
-import com.floodmap.hanoi.repository.UserRepository;
+import com.floodmap.hanoi.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,19 +20,16 @@ import java.util.Optional;
 public class AdminUserController {
 
     @Autowired
-    UserRepository userRepository;
-
-    @Autowired
-    PasswordEncoder passwordEncoder;
+    private UserService userService;
 
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers() {
-        return ResponseEntity.ok(userRepository.findAll());
+        return ResponseEntity.ok(userService.getAllUsers());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable String id) {
-        Optional<User> user = userRepository.findById(id);
+        Optional<User> user = userService.getUserById(id);
         if (user.isPresent()) {
             return ResponseEntity.ok(user.get());
         }
@@ -42,56 +38,29 @@ public class AdminUserController {
 
     @PutMapping("/{id}/lock")
     public ResponseEntity<?> toggleLockUser(@PathVariable String id) {
-        Optional<User> userOpt = userRepository.findById(id);
-        if (userOpt.isPresent()) {
-            User user = userOpt.get();
-            if (user.getRole() == Role.ADMIN) {
-                return ResponseEntity.badRequest().body(new MessageResponse("Cannot lock Admin account!"));
-            }
-            if (user.getStatus() == UserStatus.ACTIVE) {
-                user.setStatus(UserStatus.LOCKED);
-            } else {
-                user.setStatus(UserStatus.ACTIVE);
-            }
-            userRepository.save(user);
-            return ResponseEntity.ok(new MessageResponse("User status updated to " + user.getStatus()));
+        String result = userService.toggleLockUser(id);
+        if (result.contains("updated to")) {
+            return ResponseEntity.ok(new MessageResponse(result));
         }
-        return ResponseEntity.badRequest().body(new MessageResponse("User not found!"));
+        return ResponseEntity.badRequest().body(new MessageResponse(result));
     }
 
     @PutMapping("/{id}/role")
     public ResponseEntity<?> toggleUserRole(@PathVariable String id) {
-        Optional<User> userOpt = userRepository.findById(id);
-        if (userOpt.isPresent()) {
-            User user = userOpt.get();
-            if (user.getRole() == Role.ADMIN) {
-                return ResponseEntity.badRequest().body(new MessageResponse("Cannot change role of Admin!"));
-            }
-            if (user.getRole() == Role.USER) {
-                user.setRole(Role.MOD);
-            } else {
-                user.setRole(Role.USER);
-            }
-            userRepository.save(user);
-            return ResponseEntity.ok(new MessageResponse("User role updated to " + user.getRole()));
+        String result = userService.toggleUserRole(id);
+        if (result.contains("updated to")) {
+            return ResponseEntity.ok(new MessageResponse(result));
         }
-        return ResponseEntity.badRequest().body(new MessageResponse("User not found!"));
+        return ResponseEntity.badRequest().body(new MessageResponse(result));
     }
 
     @PutMapping("/{id}/reset-password")
     public ResponseEntity<?> resetPassword(@PathVariable String id, @RequestBody java.util.Map<String, String> body) {
         String newPassword = body.get("newPassword");
-        if (newPassword == null || newPassword.length() < 6) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Password must be at least 6 characters!"));
+        String result = userService.resetPassword(id, newPassword);
+        if (result.equals("Password reset successfully")) {
+            return ResponseEntity.ok(new MessageResponse(result));
         }
-
-        Optional<User> userOpt = userRepository.findById(id);
-        if (userOpt.isPresent()) {
-            User user = userOpt.get();
-            user.setPassword(passwordEncoder.encode(newPassword));
-            userRepository.save(user);
-            return ResponseEntity.ok(new MessageResponse("Password reset successfully"));
-        }
-        return ResponseEntity.badRequest().body(new MessageResponse("User not found!"));
+        return ResponseEntity.badRequest().body(new MessageResponse(result));
     }
 }

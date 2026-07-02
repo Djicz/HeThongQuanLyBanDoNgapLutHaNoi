@@ -2,13 +2,11 @@ package com.floodmap.hanoi.controller;
 
 import com.floodmap.hanoi.dto.MessageResponse;
 import com.floodmap.hanoi.model.SystemConfig;
-import com.floodmap.hanoi.repository.SystemConfigRepository;
+import com.floodmap.hanoi.service.SystemConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -17,21 +15,11 @@ import java.util.List;
 public class AdminConfigController {
 
     @Autowired
-    private SystemConfigRepository configRepository;
+    private SystemConfigService configService;
 
     @GetMapping
     public ResponseEntity<?> getConfig() {
-        List<SystemConfig> configs = configRepository.findAll();
-        if (configs.isEmpty()) {
-            // Return default if not exists
-            SystemConfig defaultConfig = SystemConfig.builder()
-                    .alertRadius(500.0) // 500m
-                    .reportExpired(24) // 24 hours
-                    .autoDeletePercent(70) // 70% downvote
-                    .build();
-            return ResponseEntity.ok(defaultConfig);
-        }
-        return ResponseEntity.ok(configs.get(0));
+        return ResponseEntity.ok(configService.getConfig());
     }
 
     @PutMapping
@@ -46,19 +34,7 @@ public class AdminConfigController {
             return ResponseEntity.badRequest().body(new MessageResponse("Thời gian hết hạn không được âm"));
         }
 
-        List<SystemConfig> configs = configRepository.findAll();
-        SystemConfig configToUpdate;
-        
-        if (configs.isEmpty()) {
-            configToUpdate = newConfig;
-        } else {
-            configToUpdate = configs.get(0);
-            configToUpdate.setAlertRadius(newConfig.getAlertRadius());
-            configToUpdate.setReportExpired(newConfig.getReportExpired());
-            configToUpdate.setAutoDeletePercent(newConfig.getAutoDeletePercent());
-        }
-        
-        configRepository.save(configToUpdate);
+        configService.updateConfig(newConfig);
         return ResponseEntity.ok(new MessageResponse("Cập nhật cấu hình thành công"));
     }
 }

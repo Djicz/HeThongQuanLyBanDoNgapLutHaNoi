@@ -2,7 +2,7 @@ package com.floodmap.hanoi.controller;
 
 import com.floodmap.hanoi.dto.MessageResponse;
 import com.floodmap.hanoi.model.User;
-import com.floodmap.hanoi.repository.UserRepository;
+import com.floodmap.hanoi.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,14 +15,14 @@ import org.springframework.web.bind.annotation.*;
 public class UserProfileController {
 
     @Autowired
-    private UserRepository userRepository;
+    private UserService userService;
 
     @GetMapping
     public ResponseEntity<?> getProfile() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if (principal instanceof UserDetails) {
             String email = ((UserDetails) principal).getUsername();
-            User user = userRepository.findByEmail(email).orElse(null);
+            User user = userService.getUserByEmail(email).orElse(null);
             if (user != null) {
                 return ResponseEntity.ok(user);
             }

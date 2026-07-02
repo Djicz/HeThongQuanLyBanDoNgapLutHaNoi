@@ -1,7 +1,7 @@
 package com.floodmap.hanoi.controller;
 
 import com.floodmap.hanoi.model.ActivityLog;
-import com.floodmap.hanoi.repository.ActivityLogRepository;
+import com.floodmap.hanoi.service.ActivityLogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,10 +16,10 @@ import java.util.List;
 public class AdminActivityLogController {
 
     @Autowired
-    private ActivityLogRepository activityLogRepository;
+    private ActivityLogService activityLogService;
 
     @GetMapping
     public ResponseEntity<List<ActivityLog>> getLogs() {
-        return ResponseEntity.ok(activityLogRepository.findAllByOrderByCreatedAtDesc());
+        return ResponseEntity.ok(activityLogService.getLogs());
     }
 }

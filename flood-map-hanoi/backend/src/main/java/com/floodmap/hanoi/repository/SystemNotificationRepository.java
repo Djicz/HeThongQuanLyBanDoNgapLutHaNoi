@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface SystemNotificationRepository extends JpaRepository<SystemNotification, String> {
     List<SystemNotification> findAllByOrderByCreatedAtDesc();
+    List<SystemNotification> findByStatusOrderByCreatedAtDesc(String status);
 }

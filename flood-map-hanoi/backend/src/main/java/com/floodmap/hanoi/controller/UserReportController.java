@@ -2,9 +2,9 @@ package com.floodmap.hanoi.controller;
 
 import com.floodmap.hanoi.dto.MessageResponse;
 import com.floodmap.hanoi.model.FloodReport;
-import com.floodmap.hanoi.repository.FloodReportRepository;
-import com.floodmap.hanoi.repository.UserRepository;
 import com.floodmap.hanoi.model.User;
+import com.floodmap.hanoi.service.FloodReportService;
+import com.floodmap.hanoi.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/user/reports")
@@ -21,16 +20,16 @@ import java.util.Optional;
 public class UserReportController {
 
     @Autowired
-    private FloodReportRepository reportRepository;
+    private FloodReportService floodReportService;
 
     @Autowired
-    private UserRepository userRepository;
+    private UserService userService;
 
     private User getCurrentUser() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if (principal instanceof UserDetails) {
             String email = ((UserDetails) principal).getUsername();
-            return userRepository.findByEmail(email).orElse(null);
+            return userService.getUserByEmail(email).orElse(null);
         }
         return null;
     }
@@ -41,7 +40,7 @@ public class UserReportController {
         User user = getCurrentUser();
         if (user == null) return ResponseEntity.status(401).body(new MessageResponse("Unauthorized"));
         
-        List<FloodReport> reports = reportRepository.findByUserId(user.getId());
+        List<FloodReport> reports = floodReportService.getMyReports(user);
         return ResponseEntity.ok(reports);
     }
 
@@ -51,25 +50,9 @@ public class UserReportController {
         User user = getCurrentUser();
         if (user == null) return ResponseEntity.status(401).body(new MessageResponse("Unauthorized"));
         
-        Optional<FloodReport> reportOpt = reportRepository.findById(id);
-        if (reportOpt.isPresent()) {
-            FloodReport report = reportOpt.get();
-            if (!report.getUser().getId().equals(user.getId())) {
-                return ResponseEntity.status(403).body(new MessageResponse("Forbidden"));
-            }
-            if ("DELETED".equals(report.getStatus())) {
-                return ResponseEntity.badRequest().body(new MessageResponse("Báo cáo đã bị xóa trước đó"));
-            }
-            User author = report.getUser();
-            if (author != null) {
-                int netPoints = report.getUpvotes() - report.getDownvotes();
-                author.setReputationPoint(author.getReputationPoint() - netPoints);
-                userRepository.save(author);
-            }
-            report.setStatus("DELETED");
-            reportRepository.save(report);
-            return ResponseEntity.ok(new MessageResponse("Đã xóa báo cáo"));
-        }
-        return ResponseEntity.badRequest().body(new MessageResponse("Không tìm thấy báo cáo"));
+        String result = floodReportService.deleteMyReport(id, user);
+        if (result.equals("Forbidden")) return ResponseEntity.status(403).body(new MessageResponse("Forbidden"));
+        if (result.equals("Đã xóa báo cáo")) return ResponseEntity.ok(new MessageResponse(result));
+        return ResponseEntity.badRequest().body(new MessageResponse(result));
     }
 }
