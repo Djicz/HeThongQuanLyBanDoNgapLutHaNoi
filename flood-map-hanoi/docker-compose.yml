@@ -1,0 +1,54 @@
+services:
+  postgis:
+    image: postgis/postgis:15-3.3
+    container_name: flood_map_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: flood_map_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: flood_map_backend
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgis:5432/flood_map_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=password
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    depends_on:
+      - postgis
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:8080/api
+    container_name: flood_map_frontend
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  # Placeholder cho OSRM, sẽ cần data để chạy
+  # osrm:
+  #   image: osrm/osrm-backend
+  #   container_name: osrm_hanoi
+  #   ports:
+  #     - "5000:5000"
+  #   volumes:
+  #     - ./osrm-data:/data
+  #   command: "osrm-routed --algorithm mld /data/hanoi.osrm"
+
+volumes:
+  postgis_data:
