@@ -6,6 +6,38 @@ import { useMapState } from '../../context/MapContext';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 
+const AddressCell: React.FC<{lat: number, lng: number}> = ({lat, lng}) => {
+    const [address, setAddress] = useState<string>('Đang tải...');
+
+    useEffect(() => {
+        let isMounted = true;
+        const fetchAddress = async () => {
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+                const data = await res.json();
+                if (isMounted) {
+                    setAddress(data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+                }
+            } catch (err) {
+                if (isMounted) {
+                    setAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+                }
+            }
+        };
+        fetchAddress();
+        return () => { isMounted = false; };
+    }, [lat, lng]);
+
+    return (
+        <Link to={`/?lat=${lat}&lng=${lng}`} style={{ color: '#2563eb', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }} title={address}>
+            <MapPin size={14} style={{ flexShrink: 0 }} />
+            <span style={{ display: 'inline-block', maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {address}
+            </span>
+        </Link>
+    );
+};
+
 function LocationPicker({ onLocationSelect, initialLat, initialLng }: { onLocationSelect: (lat: number, lng: number) => void, initialLat: number, initialLng: number }) {
     const [pos, setPos] = useState<L.LatLng | null>(initialLat ? new L.LatLng(initialLat, initialLng) : null);
     
@@ -174,6 +206,7 @@ const MyReports: React.FC = () => {
                                 <th style={{ padding: '1rem' }}>Mô tả</th>
                                 <th style={{ padding: '1rem' }}>Mức độ</th>
                                 <th style={{ padding: '1rem' }}>Trạng thái</th>
+                                <th style={{ padding: '1rem' }}>Địa điểm</th>
                                 <th style={{ padding: '1rem' }}>Đồng ý</th>
                                 <th style={{ padding: '1rem' }}>Từ chối</th>
                                 <th style={{ padding: '1rem' }}>Thời gian tạo</th>
@@ -197,6 +230,11 @@ const MyReports: React.FC = () => {
                                     </td>
                                     <td style={{ padding: '1rem', fontWeight: 500 }}>
                                         {r.status === 'PENDING' ? 'Đang chờ' : r.status === 'VERIFIED' ? 'Đã duyệt' : r.status === 'REJECTED' ? 'Bị từ chối' : r.status}
+                                    </td>
+                                    <td style={{ padding: '1rem' }}>
+                                        {r.lat && r.lng ? (
+                                            <AddressCell lat={r.lat} lng={r.lng} />
+                                        ) : 'N/A'}
                                     </td>
                                     <td style={{ padding: '1rem', color: '#16a34a', fontWeight: 'bold' }}>{r.upvotes || 0}</td>
                                     <td style={{ padding: '1rem', color: '#dc2626', fontWeight: 'bold' }}>{r.downvotes || 0}</td>

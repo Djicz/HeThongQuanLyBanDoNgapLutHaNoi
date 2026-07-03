@@ -51,4 +51,14 @@ public class FloodReport {
     
     @OneToMany(mappedBy = "floodReport", cascade = CascadeType.ALL)
     private List<Proof> proofs;
+    
+    @com.fasterxml.jackson.annotation.JsonProperty("lat")
+    public Double getLat() {
+        return location != null ? location.getY() : null;
+    }
+    
+    @com.fasterxml.jackson.annotation.JsonProperty("lng")
+    public Double getLng() {
+        return location != null ? location.getX() : null;
+    }
 }

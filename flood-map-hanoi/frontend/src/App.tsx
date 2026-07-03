@@ -52,7 +52,7 @@ const Header = () => {
         <div style={{ backgroundColor: '#2563eb', color: 'white', padding: '0.25rem', borderRadius: '0.25rem', display: 'flex' }}>
             <MapIcon size={24} />
         </div>
-        FMap
+        <span className="app-title-text">FMap</span>
       </Link>
       <div className="app-header-actions" style={{ alignItems: 'center' }}>
         {routePath.length > 0 && isHomePage && (
@@ -74,7 +74,7 @@ const Header = () => {
         
         {isAuthenticated ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontWeight: 500, color: '#374151' }}>
+            <span className="user-greeting" style={{ fontWeight: 500, color: '#374151' }}>
                 Xin chào, {user?.fullName} ({user?.role})
             </span>
             <div className="dropdown-container" ref={dropdownRef}>

@@ -1,7 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { ClipboardList, CheckCircle, XCircle, Trash2, Loader, Eye } from 'lucide-react';
+import { ClipboardList, CheckCircle, XCircle, Trash2, Loader, Eye, MapPin } from 'lucide-react';
+
+const AddressCell: React.FC<{lat: number, lng: number}> = ({lat, lng}) => {
+    const [address, setAddress] = useState<string>('Đang tải...');
+
+    useEffect(() => {
+        let isMounted = true;
+        const fetchAddress = async () => {
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+                const data = await res.json();
+                if (isMounted) {
+                    setAddress(data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+                }
+            } catch (err) {
+                if (isMounted) {
+                    setAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+                }
+            }
+        };
+        fetchAddress();
+        return () => { isMounted = false; };
+    }, [lat, lng]);
+
+    return (
+        <Link to={`/?lat=${lat}&lng=${lng}`} style={{ color: '#2563eb', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }} title={address}>
+            <MapPin size={14} style={{ flexShrink: 0 }} />
+            <span style={{ display: 'inline-block', maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {address}
+            </span>
+        </Link>
+    );
+};
 
 const ReportManagement: React.FC = () => {
     const { token, user } = useAuth();
@@ -83,6 +115,7 @@ const ReportManagement: React.FC = () => {
                                 <th style={{ padding: '1rem' }}>Mô tả</th>
                                 <th style={{ padding: '1rem' }}>Mức độ</th>
                                 <th style={{ padding: '1rem' }}>Trạng thái</th>
+                                <th style={{ padding: '1rem' }}>Địa điểm</th>
                                 <th style={{ padding: '1rem' }}>Người gửi</th>
                                 <th style={{ padding: '1rem' }}>Thời gian</th>
                                 <th style={{ padding: '1rem' }}>Thao tác</th>
@@ -105,6 +138,11 @@ const ReportManagement: React.FC = () => {
                                     </td>
                                     <td style={{ padding: '1rem', fontWeight: 500 }}>
                                         {r.status}
+                                    </td>
+                                    <td style={{ padding: '1rem' }}>
+                                        {r.lat && r.lng ? (
+                                            <AddressCell lat={r.lat} lng={r.lng} />
+                                        ) : 'N/A'}
                                     </td>
                                     <td style={{ padding: '1rem' }}>{r.user?.email || 'N/A'}</td>
                                     <td style={{ padding: '1rem', whiteSpace: 'nowrap' }}>

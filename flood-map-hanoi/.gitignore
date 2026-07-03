@@ -106,3 +106,10 @@ buildNumber.properties
 # Spring Boot
 HELP.md
 
+# Data files
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!tsconfig.*.json
+reports.json

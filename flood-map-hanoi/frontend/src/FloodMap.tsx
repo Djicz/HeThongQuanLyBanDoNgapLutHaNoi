@@ -1,9 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { useMapState } from './context/MapContext';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline, Circle, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Search, MapPin, Navigation } from 'lucide-react';
+import { Geolocation } from '@capacitor/geolocation';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { registerPlugin } from "@capacitor/core";
+
+const BackgroundGeolocation = registerPlugin<any>("BackgroundGeolocation");
 
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -47,16 +53,23 @@ function countFloodedAreas(path: [number, number][], reports: FloodReportDTO[], 
     const verifiedReports = reports.filter(r => r.status === 'VERIFIED');
     let count = 0;
     for (const report of verifiedReports) {
-        let isFlooded = false;
-        for (const [lat, lng] of path) {
-            if (distance(report.lat, report.lng, lat, lng) < radius) {
-                isFlooded = true;
+        for (const pt of path) {
+            const dist = distance(pt[0], pt[1], report.lat, report.lng);
+            if (dist <= radius) {
+                count++;
                 break;
             }
         }
-        if (isFlooded) count++;
     }
     return count;
+}
+
+function MapController({ center, zoom }: { center: L.LatLngTuple, zoom: number }) {
+    const map = useMap();
+    useEffect(() => {
+        map.setView(center, zoom);
+    }, [center, zoom, map]);
+    return null;
 }
 
 function MapBoundsFitter({ path }: { path: [number, number][] }) {
@@ -117,8 +130,29 @@ function MapClickHandler({
 }
 
 export default function FloodMap() {
-  const { user, token, isAuthenticated } = useAuth();
-  const [reports, setReports] = useState<FloodReportDTO[]>([]);
+    const { user, token, isAuthenticated } = useAuth();
+    const [reports, setReports] = useState<FloodReportDTO[]>([]);
+    const notifiedReports = useRef<Set<string>>(new Set());
+
+    useEffect(() => {
+        const setupNotifications = async () => {
+            try {
+                await LocalNotifications.requestPermissions();
+                await LocalNotifications.createChannel({
+                    id: 'flood_alerts',
+                    name: 'Cảnh báo ngập lụt',
+                    description: 'Thông báo khi đi vào vùng ngập nguy hiểm',
+                    importance: 5,
+                    visibility: 1
+                });
+            } catch (e) {
+                console.error("Local notifications setup failed", e);
+            }
+        };
+        setupNotifications();
+    }, []);
+
+    const location = useLocation();
   const { 
     mapClickMode, setMapClickMode, 
     routeStart, setRouteStart, 
@@ -133,9 +167,20 @@ export default function FloodMap() {
   const [startAddress, setStartAddress] = useState('');
   const [endAddress, setEndAddress] = useState('');
 
-  const position: L.LatLngTuple = [21.0285, 105.8542];
+  const [position, setPosition] = useState<L.LatLngTuple>([21.0285, 105.8542]);
+  const [mapZoom, setMapZoom] = useState(13);
 
   const [alertRadius, setAlertRadius] = useState(500);
+
+  useEffect(() => {
+      const queryParams = new URLSearchParams(location.search);
+      const lat = queryParams.get('lat');
+      const lng = queryParams.get('lng');
+      if (lat && lng) {
+          setPosition([parseFloat(lat), parseFloat(lng)]);
+          setMapZoom(17);
+      }
+  }, [location.search]);
 
   const fetchConfig = async () => {
       try {
@@ -213,28 +258,107 @@ export default function FloodMap() {
   }, [isAuthenticated, token]);
 
   useEffect(() => {
-      if (isAuthenticated && 'geolocation' in navigator) {
-          const alertInterval = setInterval(() => {
-              navigator.geolocation.getCurrentPosition((pos) => {
-                  const userLat = pos.coords.latitude;
-                  const userLng = pos.coords.longitude;
-                  
-                  // Check if any report is close (e.g. < 2km)
-                  const closeReports = reports.filter(r => {
-                      if (r.level === 'LOW') return false;
-                      const dist = Math.sqrt(Math.pow(r.lat - userLat, 2) + Math.pow(r.lng - userLng, 2)) * 111; // approx km
-                      return dist < 2;
-                  });
-
-                  if (closeReports.length > 0) {
-                      // Optional: Use Notification API or custom toast
-                      // alert(`CẢNH BÁO: Có ${closeReports.length} điểm ngập nghiêm trọng trong bán kính 2km xung quanh bạn!`);
-                  }
+      // Request notification permissions immediately on app start
+      LocalNotifications.requestPermissions().then((perm) => {
+          if (perm.display === 'granted') {
+              LocalNotifications.createChannel({
+                  id: 'flood_alerts',
+                  name: 'Cảnh báo ngập lụt',
+                  description: 'Thông báo khi đi vào vùng ngập nguy hiểm',
+                  importance: 5,
+                  visibility: 1
               });
-          }, 60000); // Check every 1 minute
-          return () => clearInterval(alertInterval);
-      }
-  }, [reports, isAuthenticated]);
+          }
+      });
+  }, []);
+
+  useEffect(() => {
+      let watcherId: string | null = null;
+      
+      const startBackgroundTracking = async () => {
+          try {
+              watcherId = await BackgroundGeolocation.addWatcher(
+                  {
+                      backgroundMessage: "Ứng dụng đang theo dõi vị trí để cảnh báo ngập lụt.",
+                      backgroundTitle: "Cảnh báo ngập lụt đang chạy",
+                      requestPermissions: true,
+                      stale: false,
+                      distanceFilter: 10 // Trigger every 10 meters of movement
+                  },
+                  function callback(location: any, error: any) {
+                      if (error) {
+                          if (error.code === "NOT_AUTHORIZED") {
+                              console.error("Background location not authorized");
+                          }
+                          return;
+                      }
+                      
+                      const userLat = location.latitude;
+                      const userLng = location.longitude;
+                      
+                      const closeReports = reports.filter(r => {
+                          if (r.level === 'LOW') return false;
+                          const dist = Math.sqrt(Math.pow(r.lat - userLat, 2) + Math.pow(r.lng - userLng, 2)) * 111; // approx km
+                          return dist <= (alertRadius / 1000);
+                      });
+
+                      // Reset notified status for reports that are no longer close
+                      const closeReportIds = new Set(closeReports.map(r => r.id));
+                      const idsToRemove: string[] = [];
+                      notifiedReports.current.forEach(id => {
+                          if (!closeReportIds.has(id)) {
+                              idsToRemove.push(id);
+                          }
+                      });
+                      idsToRemove.forEach(id => notifiedReports.current.delete(id));
+
+                      const unnotifiedReports = closeReports.filter(r => !notifiedReports.current.has(r.id));
+
+                      if (unnotifiedReports.length > 0) {
+                          const msg = `Bạn đang ở gần ${unnotifiedReports.length} điểm ngập nguy hiểm. Hãy chuyển hướng ngay!`;
+
+                          LocalNotifications.checkPermissions().then(async (perm) => {
+                              let canNotify = perm.display === 'granted';
+                              if (!canNotify) {
+                                  const req = await LocalNotifications.requestPermissions();
+                                  canNotify = req.display === 'granted';
+                              }
+
+                              if (canNotify) {
+                                  try {
+                                      await LocalNotifications.schedule({
+                                          notifications: [
+                                              {
+                                                  title: "Cảnh báo ngập lụt",
+                                                  body: msg,
+                                                  id: Math.floor(Math.random() * 1000000),
+                                                  channelId: 'flood_alerts'
+                                              }
+                                          ]
+                                      });
+                                      // Mark as notified only after successful scheduling
+                                      unnotifiedReports.forEach(r => notifiedReports.current.add(r.id));
+                                  } catch (e) {
+                                      console.error("Failed to schedule notification", e);
+                                  }
+                              }
+                          });
+                      }
+                  }
+              );
+          } catch (error) {
+              console.error("Failed to start background geolocation", error);
+          }
+      };
+
+      startBackgroundTracking();
+
+      return () => {
+          if (watcherId) {
+              BackgroundGeolocation.removeWatcher({ id: watcherId });
+          }
+      };
+  }, [reports, alertRadius]);
 
   useEffect(() => {
     if (routeStart && routeEnd) {
@@ -275,19 +399,31 @@ export default function FloodMap() {
       }
   }, [alternativeRoutes, reports, alertRadius]);
 
-  useEffect(() => {
-      if (isSearchOpen && !routeStart && !startAddress) {
-          if ('geolocation' in navigator) {
-              navigator.geolocation.getCurrentPosition(async (pos) => {
-                  const lat = pos.coords.latitude;
-                  const lng = pos.coords.longitude;
-                  setRouteStart(new L.LatLng(lat, lng));
-                  const addr = await getAddressFromCoords(lat, lng);
-                  setStartAddress(addr);
-              });
-          }
-      }
-  }, [isSearchOpen]);
+    useEffect(() => {
+        if (isSearchOpen && !routeStart && !startAddress) {
+            const fetchLocation = async () => {
+                try {
+                    const position = await Geolocation.getCurrentPosition();
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    setRouteStart(new L.LatLng(lat, lng));
+                    const addr = await getAddressFromCoords(lat, lng);
+                    setStartAddress(addr);
+                } catch (e) {
+                    if ('geolocation' in navigator) {
+                        navigator.geolocation.getCurrentPosition(async (pos) => {
+                            const lat = pos.coords.latitude;
+                            const lng = pos.coords.longitude;
+                            setRouteStart(new L.LatLng(lat, lng));
+                            const addr = await getAddressFromCoords(lat, lng);
+                            setStartAddress(addr);
+                        });
+                    }
+                }
+            };
+            fetchLocation();
+        }
+    }, [isSearchOpen]);
 
   const handleSearchRoute = async () => {
       if (startAddress && !routeStart) {
@@ -331,7 +467,7 @@ export default function FloodMap() {
   return (
     <div className="map-container-wrapper">
       {isSearchOpen && (
-          <div className="glass-panel" style={{ 
+          <div className="glass-panel search-panel" style={{ 
               position: 'absolute', top: '20px', left: '60px', zIndex: 1000, 
               padding: '1.5rem', borderRadius: '12px', width: '320px',
               boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)'
@@ -389,7 +525,8 @@ export default function FloodMap() {
           </div>
       )}
 
-      <MapContainer center={position} zoom={13} scrollWheelZoom={true} className="map-container">
+      <MapContainer center={position} zoom={mapZoom} scrollWheelZoom={true} className="map-container">
+        <MapController center={position} zoom={mapZoom} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
