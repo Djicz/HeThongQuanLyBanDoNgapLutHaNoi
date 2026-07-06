@@ -13,7 +13,7 @@ const AddressCell: React.FC<{lat: number, lng: number}> = ({lat, lng}) => {
         let isMounted = true;
         const fetchAddress = async () => {
             try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/public/external/nominatim/reverse?lat=${lat}&lng=${lng}`);
                 const data = await res.json();
                 if (isMounted) {
                     setAddress(data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
@@ -68,7 +68,7 @@ const MyReports: React.FC = () => {
     const fetchAddress = async (lat: number, lng: number) => {
         try {
             setAddress('Đang tải địa chỉ...');
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/public/external/nominatim/reverse?lat=${lat}&lng=${lng}`);
             const data = await res.json();
             setAddress(data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`);
         } catch (err) {

@@ -196,7 +196,7 @@ export default function FloodMap() {
 
   const getAddressFromCoords = async (lat: number, lng: number) => {
       try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/public/external/nominatim/reverse?lat=${lat}&lng=${lng}`);
           const data = await res.json();
           return data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
       } catch (err) {
@@ -206,7 +206,7 @@ export default function FloodMap() {
 
   const getCoordsFromAddress = async (address: string): Promise<[number, number] | null> => {
       try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`);
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/public/external/nominatim/search?q=${encodeURIComponent(address)}`);
           const data = await res.json();
           if (data && data.length > 0) {
               return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
@@ -362,7 +362,7 @@ export default function FloodMap() {
 
   useEffect(() => {
     if (routeStart && routeEnd) {
-      fetch(`http://router.project-osrm.org/route/v1/driving/${routeStart.lng},${routeStart.lat};${routeEnd.lng},${routeEnd.lat}?overview=full&geometries=geojson&alternatives=3`)
+      fetch(`${import.meta.env.VITE_API_URL}/public/external/osrm/route?startLng=${routeStart.lng}&startLat=${routeStart.lat}&endLng=${routeEnd.lng}&endLat=${routeEnd.lat}`)
         .then(res => res.json())
         .then(data => {
             if (data.routes && data.routes.length > 0) {

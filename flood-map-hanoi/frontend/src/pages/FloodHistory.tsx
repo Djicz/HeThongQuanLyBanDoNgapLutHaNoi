@@ -41,7 +41,7 @@ const FloodHistory: React.FC = () => {
                 if (newAddresses[item.id]) continue; // already fetched
 
                 try {
-                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${item.lat}&lon=${item.lng}`);
+                    const response = await fetch(`${import.meta.env.VITE_API_URL}/public/external/nominatim/reverse?lat=${item.lat}&lng=${item.lng}`);
                     const data = await response.json();
                     
                     if (data && data.address) {

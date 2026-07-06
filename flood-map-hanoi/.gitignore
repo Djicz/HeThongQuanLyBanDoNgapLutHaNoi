@@ -113,3 +113,7 @@ HELP.md
 !tsconfig.json
 !tsconfig.*.json
 reports.json
+
+# Uploaded files
+backend/uploads/*
+!backend/uploads/.gitkeep
