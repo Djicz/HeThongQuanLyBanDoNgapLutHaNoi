@@ -1,0 +1,84 @@
+name: Flood Map CI/CD
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    # ========================================
+    # 1. BUILD BACKEND (SPRING BOOT)
+    # ========================================
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Build Backend (Maven)
+      run: |
+        cd backend
+        mvn clean package -DskipTests
+
+    # ========================================
+    # 2. BUILD FRONTEND (VITE / REACT)
+    # ========================================
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install Frontend Dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Build Frontend
+      run: |
+        cd frontend
+        npm run build
+
+    # ========================================
+    # 3. BUILD DOCKER IMAGES
+    # ========================================
+    - name: Build Docker Images
+      run: |
+        # Chỉ build để đảm bảo Dockerfile không bị lỗi
+        docker-compose build
+
+    # ========================================
+    # 4. BUILD ANDROID APK
+    # ========================================
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Sync Capacitor Android
+      run: |
+        cd frontend
+        npx cap sync android
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x frontend/android/gradlew
+
+    - name: Build Android APK
+      run: |
+        cd frontend/android
+        ./gradlew assembleDebug
+
+    - name: Upload Android APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: flood-map-hanoi-apk
+        path: frontend/android/app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 7

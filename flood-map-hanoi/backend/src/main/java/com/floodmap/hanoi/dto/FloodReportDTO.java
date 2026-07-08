@@ -13,4 +13,5 @@ public class FloodReportDTO {
     private String userId;
     private int upvotes;
     private int downvotes;
+    private String proofImage;
 }

@@ -13,10 +13,14 @@ public class ExternalApiController {
     @Autowired
     private ExternalApiService externalApiService;
 
-    @GetMapping("/nominatim/reverse")
+    @GetMapping(value = "/nominatim/reverse", produces = "application/json;charset=UTF-8")
     public ResponseEntity<String> reverseGeocode(@RequestParam double lat, @RequestParam double lng) {
-        String result = externalApiService.reverseGeocode(lat, lng);
-        return ResponseEntity.ok(result);
+        try {
+            String result = externalApiService.reverseGeocode(lat, lng);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("{\"error\": \"Failed to fetch address\"}");
+        }
     }
 
     @GetMapping("/nominatim/search")
@@ -30,8 +34,9 @@ public class ExternalApiController {
             @RequestParam double startLng, 
             @RequestParam double startLat, 
             @RequestParam double endLng, 
-            @RequestParam double endLat) {
-        String result = externalApiService.getRoute(startLng, startLat, endLng, endLat);
+            @RequestParam double endLat,
+            @RequestParam(defaultValue = "driving") String vehicleType) {
+        String result = externalApiService.getRoute(startLng, startLat, endLng, endLat, vehicleType);
         return ResponseEntity.ok(result);
     }
 }

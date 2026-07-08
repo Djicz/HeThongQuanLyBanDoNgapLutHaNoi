@@ -78,7 +78,7 @@ const NotificationManagement: React.FC = () => {
     if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}><Loader className="animate-spin" /> Đang tải...</div>;
 
     return (
-        <div style={{ padding: '6rem 2rem 2rem 2rem', maxWidth: '1000px', margin: '0 auto' }}>
+        <div className="mobile-page" style={{ maxWidth: '1000px', margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Bell /> Quản lý thông báo</h2>
                 <div style={{ display: 'flex', gap: '10px' }}>

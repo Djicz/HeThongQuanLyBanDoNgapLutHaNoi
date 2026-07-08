@@ -35,7 +35,7 @@ public class UserReportController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('USER', 'MOD', 'ADMIN')")
     public ResponseEntity<?> getMyReports() {
         User user = getCurrentUser();
         if (user == null) return ResponseEntity.status(401).body(new MessageResponse("Unauthorized"));
@@ -45,7 +45,7 @@ public class UserReportController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('USER', 'MOD', 'ADMIN')")
     public ResponseEntity<?> deleteMyReport(@PathVariable String id) {
         User user = getCurrentUser();
         if (user == null) return ResponseEntity.status(401).body(new MessageResponse("Unauthorized"));

@@ -46,7 +46,7 @@ public class FloodReportController {
     }
 
     @PostMapping(consumes = { "multipart/form-data" })
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('USER', 'MOD', 'ADMIN')")
     public ResponseEntity<?> createReport(
             @RequestParam("lat") double lat,
             @RequestParam("lng") double lng,

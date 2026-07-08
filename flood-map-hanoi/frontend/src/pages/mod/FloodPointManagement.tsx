@@ -80,7 +80,7 @@ const FloodPointManagement: React.FC = () => {
     if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}><Loader className="animate-spin" /> Đang tải...</div>;
 
     return (
-        <div style={{ padding: '6rem 2rem 2rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
+        <div className="mobile-page" style={{ maxWidth: '1200px', margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Map /> Quản lý Vùng Ngập Lụt</h2>
                 <Link to="/mod/reports" className="btn btn-outline" style={{ textDecoration: 'none' }}>Kiểm duyệt báo cáo</Link>

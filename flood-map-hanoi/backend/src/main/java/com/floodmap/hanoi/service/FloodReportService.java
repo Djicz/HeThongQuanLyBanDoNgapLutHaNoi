@@ -1,5 +1,7 @@
 package com.floodmap.hanoi.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.floodmap.hanoi.dto.FloodHistoryDTO;
 import com.floodmap.hanoi.dto.FloodReportDTO;
 import com.floodmap.hanoi.model.FloodReport;
@@ -19,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.annotation.PostConstruct;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -40,6 +43,11 @@ public class FloodReportService {
 
     @Autowired
     private FloodZoneRepository zoneRepository;
+
+    @Autowired
+    private ExternalApiService externalApiService;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
@@ -70,18 +78,59 @@ public class FloodReportService {
         return stats;
     }
 
-    public List<Map<String, Object>> getReportsByDistrict() {
+    public Map<String, Object> getDashboardChartsData() {
         List<FloodReport> reports = floodReportRepository.findAll();
+        
         Map<String, Long> countByDistrict = reports.stream()
+                .filter(r -> !"DELETED".equals(r.getStatus()))
                 .filter(r -> r.getDistrict() != null && !r.getDistrict().isEmpty())
                 .collect(Collectors.groupingBy(FloodReport::getDistrict, Collectors.counting()));
 
-        return countByDistrict.entrySet().stream().map(entry -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("name", entry.getKey());
-            map.put("value", entry.getValue());
-            return map;
-        }).collect(Collectors.toList());
+        List<Map<String, Object>> reportsByDistrictList = countByDistrict.entrySet().stream()
+                .sorted((e1, e2) -> Long.compare(e2.getValue(), e1.getValue()))
+                .limit(3)
+                .map(entry -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("name", entry.getKey());
+                    map.put("value", entry.getValue());
+                    return map;
+                })
+                .collect(Collectors.toList());
+
+        List<FloodZone> activeZones = zoneRepository.findAll();
+        Map<String, Long> verifiedByDistrict = activeZones.stream()
+                .filter(z -> "ACTIVE".equals(z.getStatus()))
+                .filter(z -> z.getDistrict() != null && !z.getDistrict().isEmpty())
+                .collect(Collectors.groupingBy(FloodZone::getDistrict, Collectors.counting()));
+
+        List<Map.Entry<String, Long>> sortedVerified = verifiedByDistrict.entrySet().stream()
+                .sorted((e1, e2) -> Long.compare(e2.getValue(), e1.getValue()))
+                .collect(Collectors.toList());
+
+        List<Map<String, Object>> floodRatioByAreaList = new ArrayList<>();
+        long otherCount = 0;
+        for (int i = 0; i < sortedVerified.size(); i++) {
+            if (i < 4) {
+                Map<String, Object> map = new HashMap<>();
+                map.put("name", sortedVerified.get(i).getKey());
+                map.put("value", sortedVerified.get(i).getValue());
+                floodRatioByAreaList.add(map);
+            } else {
+                otherCount += sortedVerified.get(i).getValue();
+            }
+        }
+        if (otherCount > 0) {
+            Map<String, Object> otherMap = new HashMap<>();
+            otherMap.put("name", "Khác");
+            otherMap.put("value", otherCount);
+            floodRatioByAreaList.add(otherMap);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("reportsByDistrict", reportsByDistrictList);
+        result.put("floodRatioByArea", floodRatioByAreaList);
+        
+        return result;
     }
 
     // For FloodHistoryController
@@ -192,6 +241,9 @@ public class FloodReportService {
             }
             dto.setUpvotes(report.getUpvotes());
             dto.setDownvotes(report.getDownvotes());
+            if (report.getProofs() != null && !report.getProofs().isEmpty()) {
+                dto.setProofImage(report.getProofs().get(0).getFileUrl());
+            }
             return dto;
         }).toList();
     }
@@ -205,6 +257,23 @@ public class FloodReportService {
         
         Point point = geometryFactory.createPoint(new Coordinate(lng, lat));
         report.setLocation(point);
+
+        try {
+            String geoJson = externalApiService.reverseGeocode(lat, lng);
+            JsonNode root = objectMapper.readTree(geoJson);
+            JsonNode addressNode = root.path("address");
+            if (!addressNode.isMissingNode()) {
+                String district = addressNode.path("city_district").asText(null);
+                if (district == null) district = addressNode.path("county").asText(null);
+                if (district == null) district = addressNode.path("suburb").asText(null);
+                if (district == null) district = addressNode.path("state_district").asText(null);
+                report.setDistrict(district != null ? district : "Không xác định");
+            } else {
+                report.setDistrict("Không xác định");
+            }
+        } catch (Exception e) {
+            report.setDistrict("Không xác định");
+        }
 
         if (image != null && !image.isEmpty()) {
             String uploadsDir = "uploads/";
@@ -256,6 +325,7 @@ public class FloodReportService {
 
             FloodZone zone = FloodZone.builder()
                     .centerPoint(report.getLocation())
+                    .district(report.getDistrict())
                     .radius(radius)
                     .level(report.getLevel())
                     .description(report.getDescription())
@@ -325,5 +395,64 @@ public class FloodReportService {
             return "Đã xóa báo cáo";
         }
         return "Không tìm thấy báo cáo";
+    }
+
+    @PostConstruct
+    public void autoBackfillDistricts() {
+        new Thread(this::backfillDistricts).start();
+    }
+
+    public void backfillDistricts() {
+        List<FloodReport> reports = floodReportRepository.findAll();
+        for (FloodReport report : reports) {
+            if (report.getDistrict() == null || report.getDistrict().isEmpty() || report.getDistrict().equals("Không xác định")) {
+                if (report.getLocation() != null) {
+                    double lat = report.getLocation().getY();
+                    double lng = report.getLocation().getX();
+                    try {
+                        String geoJson = externalApiService.reverseGeocode(lat, lng);
+                        JsonNode root = objectMapper.readTree(geoJson);
+                        JsonNode addressNode = root.path("address");
+                        if (!addressNode.isMissingNode()) {
+                            String district = addressNode.path("city_district").asText(null);
+                            if (district == null) district = addressNode.path("county").asText(null);
+                            if (district == null) district = addressNode.path("suburb").asText(null);
+                            if (district == null) district = addressNode.path("state_district").asText(null);
+                            report.setDistrict(district != null ? district : "Không xác định");
+                            floodReportRepository.save(report);
+                        }
+                        Thread.sleep(1000); // Nominatim rate limit
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+
+        List<FloodZone> zones = zoneRepository.findAll();
+        for (FloodZone zone : zones) {
+            if (zone.getDistrict() == null || zone.getDistrict().isEmpty() || zone.getDistrict().equals("Không xác định")) {
+                if (zone.getCenterPoint() != null) {
+                    double lat = zone.getCenterPoint().getY();
+                    double lng = zone.getCenterPoint().getX();
+                    try {
+                        String geoJson = externalApiService.reverseGeocode(lat, lng);
+                        JsonNode root = objectMapper.readTree(geoJson);
+                        JsonNode addressNode = root.path("address");
+                        if (!addressNode.isMissingNode()) {
+                            String district = addressNode.path("city_district").asText(null);
+                            if (district == null) district = addressNode.path("county").asText(null);
+                            if (district == null) district = addressNode.path("suburb").asText(null);
+                            if (district == null) district = addressNode.path("state_district").asText(null);
+                            zone.setDistrict(district != null ? district : "Không xác định");
+                            zoneRepository.save(zone);
+                        }
+                        Thread.sleep(1000);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
     }
 }

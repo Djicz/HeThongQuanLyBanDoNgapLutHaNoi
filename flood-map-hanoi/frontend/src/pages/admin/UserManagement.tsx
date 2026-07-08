@@ -88,7 +88,7 @@ const UserManagement: React.FC = () => {
     if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}><Loader className="animate-spin" /> Đang tải...</div>;
 
     return (
-        <div style={{ padding: '6rem 2rem 2rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
+        <div className="mobile-page" style={{ maxWidth: '1200px', margin: '0 auto' }}>
             <h2>Quản lý người dùng</h2>
             {error && <div className="status-danger">{error}</div>}
             

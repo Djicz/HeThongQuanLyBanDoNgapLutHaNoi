@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronDown, Map as MapIcon, History, User, MapPin, CheckSquare, Layers, Users, Settings, Activity, Bell, LogOut, Search, X } from 'lucide-react';
+import { ChevronDown, Map as MapIcon, History, User, MapPin, CheckSquare, Layers, Users, Settings, Activity, Bell, LogOut, Search, X, Menu } from 'lucide-react';
 import './dropdown.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { MapProvider, useMapState } from './context/MapContext';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import FloodMap from './FloodMap';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -16,8 +17,8 @@ import ReportManagement from './pages/mod/ReportManagement';
 import FloodPointManagement from './pages/mod/FloodPointManagement';
 import MyReports from './pages/user/MyReports';
 import Profile from './pages/user/Profile';
-import SavedRoutes from './pages/user/SavedRoutes';
 import FloodHistory from './pages/FloodHistory';
+import MenuPage from './pages/Menu';
 
 const Header = () => {
   const { user, isAuthenticated, logout, isAdmin } = useAuth();
@@ -95,7 +96,7 @@ const Header = () => {
                         <User size={18} /> Hồ sơ cá nhân
                     </Link>
                     
-                    {user?.role === 'USER' && (
+                    {(user?.role === 'USER' || isModOrAdmin) && (
                         <Link to="/user/reports" onClick={() => setDropdownOpen(false)}>
                             <MapPin size={18} /> Báo cáo của tôi
                         </Link>
@@ -225,6 +226,11 @@ const SystemNotificationBanner = () => {
 };
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
+  const location = useLocation();
+  const { isAuthenticated } = useAuth();
+
+  const isMenuActive = location.pathname === '/menu' || location.pathname.startsWith('/user/') || location.pathname.startsWith('/mod/') || location.pathname.startsWith('/admin/');
+
   return (
     <div className="app-container">
       <Header />
@@ -232,6 +238,22 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       <main className="main-content">
         {children}
       </main>
+      
+      {/* Mobile Bottom Navigation (Material 3 Style) */}
+      <nav className="bottom-nav">
+        <Link to="/" className={`bottom-nav-item ${location.pathname === '/' ? 'active' : ''}`}>
+          <div className="icon-wrapper"><MapIcon size={24} /></div>
+          <span>Bản đồ</span>
+        </Link>
+        <Link to="/history" className={`bottom-nav-item ${location.pathname === '/history' ? 'active' : ''}`}>
+          <div className="icon-wrapper"><History size={24} /></div>
+          <span>Lịch sử</span>
+        </Link>
+        <Link to="/menu" className={`bottom-nav-item ${isMenuActive && location.pathname !== '/profile' ? 'active' : ''}`}>
+          <div className="icon-wrapper"><Menu size={24} /></div>
+          <span>Menu</span>
+        </Link>
+      </nav>
     </div>
   );
 };
@@ -239,6 +261,18 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 function App() {
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL}/public/visit`, { method: 'POST' }).catch(console.error);
+    
+    // Configure status bar: transparent overlay so it floats on the map
+    const initStatusBar = async () => {
+      try {
+        await StatusBar.setOverlaysWebView({ overlay: true });
+        await StatusBar.setBackgroundColor({ color: '#00000000' }); // Transparent
+        await StatusBar.setStyle({ style: Style.Light }); // Dark icons
+      } catch (e) {
+        // Not on a Capacitor device
+      }
+    };
+    initStatusBar();
   }, []);
 
   return (
@@ -251,8 +285,8 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/history" element={<Layout><FloodHistory /></Layout>} />
           <Route path="/profile" element={<Layout><Profile /></Layout>} />
+          <Route path="/menu" element={<Layout><MenuPage /></Layout>} />
           <Route path="/user/reports" element={<Layout><MyReports /></Layout>} />
-          <Route path="/user/routes" element={<Layout><SavedRoutes /></Layout>} />
           <Route path="/admin/dashboard" element={<Layout><Dashboard /></Layout>} />
           <Route path="/admin/users" element={<Layout><UserManagement /></Layout>} />
           <Route path="/admin/config" element={<Layout><SystemConfig /></Layout>} />

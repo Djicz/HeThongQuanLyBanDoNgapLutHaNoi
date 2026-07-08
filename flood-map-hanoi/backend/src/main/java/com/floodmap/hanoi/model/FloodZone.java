@@ -22,6 +22,8 @@ public class FloodZone {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Point centerPoint;
     
+    private String district;
+    
     private double radius;
     
     private String level; // LOW, MEDIUM, HIGH

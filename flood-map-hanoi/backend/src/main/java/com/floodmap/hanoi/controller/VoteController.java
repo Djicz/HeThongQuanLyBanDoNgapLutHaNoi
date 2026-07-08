@@ -32,7 +32,7 @@ public class VoteController {
     }
 
     @PostMapping("/{id}/vote")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('USER', 'MOD', 'ADMIN')")
     public ResponseEntity<?> voteReport(@PathVariable String id, @RequestParam boolean isUpvote) {
         User currentUser = getCurrentUser();
         if (currentUser == null) return ResponseEntity.status(401).body(new MessageResponse("Unauthorized"));

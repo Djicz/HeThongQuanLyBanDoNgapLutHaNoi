@@ -25,11 +25,11 @@ const Login: React.FC = () => {
                 body: JSON.stringify({ email, password }),
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                throw new Error(data.message || data.error || 'Đăng nhập thất bại');
+                throw new Error('Sai tài khoản mật khẩu hoặc tài khoản của bạn đã bị khoá');
             }
+
+            const data = await response.json();
 
             login(data.token, {
                 id: data.id,

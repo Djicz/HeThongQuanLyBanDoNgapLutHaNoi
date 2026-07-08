@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface ReportVoteRepository extends JpaRepository<ReportVote, String> {
     Optional<ReportVote> findByUserIdAndReportId(String userId, String reportId);
+    java.util.List<ReportVote> findByReportId(String reportId);
 }

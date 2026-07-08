@@ -22,6 +22,12 @@ public class AdminDashboardController {
 
     @GetMapping("/reports-by-district")
     public ResponseEntity<?> getReportsByDistrict() {
-        return ResponseEntity.ok(floodReportService.getReportsByDistrict());
+        return ResponseEntity.ok(floodReportService.getDashboardChartsData());
+    }
+
+    @PostMapping("/backfill-districts")
+    public ResponseEntity<?> backfillDistricts() {
+        new Thread(() -> floodReportService.backfillDistricts()).start();
+        return ResponseEntity.ok(java.util.Map.of("message", "Đang cập nhật lại quận/huyện cho các báo cáo cũ. Vui lòng đợi vài phút."));
     }
 }

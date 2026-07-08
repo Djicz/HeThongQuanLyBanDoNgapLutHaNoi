@@ -9,7 +9,8 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#ff7300'
 const Dashboard: React.FC = () => {
     const { token, isAdmin } = useAuth();
     const [stats, setStats] = useState<any>(null);
-    const [districtData, setDistrictData] = useState<any[]>([]);
+    const [reportsByDistrict, setReportsByDistrict] = useState<any[]>([]);
+    const [floodRatioByArea, setFloodRatioByArea] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -30,10 +31,11 @@ const Dashboard: React.FC = () => {
             if (!statsRes.ok || !districtRes.ok) throw new Error('Không thể tải dữ liệu thống kê');
 
             const statsData = await statsRes.json();
-            const districtJson = await districtRes.json();
+            const chartsData = await districtRes.json();
 
             setStats(statsData);
-            setDistrictData(districtJson);
+            setReportsByDistrict(chartsData.reportsByDistrict || []);
+            setFloodRatioByArea(chartsData.floodRatioByArea || []);
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -48,7 +50,7 @@ const Dashboard: React.FC = () => {
     if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}><Loader className="animate-spin" /> Đang tải...</div>;
 
     return (
-        <div style={{ padding: '6rem 2rem 2rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
+        <div className="mobile-page" style={{ maxWidth: '1200px', margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h2>Thống kê hệ thống</h2>
                 <Link to="/admin/users" className="btn btn-outline" style={{ textDecoration: 'none' }}>Quản lý người dùng</Link>
@@ -91,9 +93,9 @@ const Dashboard: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '2rem' }}>
                 <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '12px' }}>
                     <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#374151' }}>Số báo cáo theo Quận/Huyện</h3>
-                    {districtData.length > 0 ? (
+                    {reportsByDistrict.length > 0 ? (
                         <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={districtData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                            <BarChart data={reportsByDistrict} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="name" />
                                 <YAxis />
@@ -109,11 +111,11 @@ const Dashboard: React.FC = () => {
 
                 <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '12px' }}>
                     <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#374151' }}>Tỷ lệ ngập theo khu vực</h3>
-                    {districtData.length > 0 ? (
+                    {floodRatioByArea.length > 0 ? (
                         <ResponsiveContainer width="100%" height={300}>
                             <PieChart>
                                 <Pie
-                                    data={districtData}
+                                    data={floodRatioByArea}
                                     cx="50%"
                                     cy="50%"
                                     labelLine={false}
@@ -122,7 +124,7 @@ const Dashboard: React.FC = () => {
                                     fill="#8884d8"
                                     dataKey="value"
                                 >
-                                    {districtData.map((entry, index) => (
+                                    {floodRatioByArea.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
