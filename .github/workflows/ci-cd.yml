@@ -24,10 +24,10 @@ jobs:
         distribution: 'temurin'
         cache: maven
 
-    - name: Build Backend (Maven)
+    - name: Build and Test Backend (Maven)
       run: |
         cd flood-map-hanoi/backend
-        mvn clean package -DskipTests
+        mvn clean package
 
     # ========================================
     # 2. BUILD FRONTEND (VITE / REACT)
