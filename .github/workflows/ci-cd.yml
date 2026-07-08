@@ -55,7 +55,7 @@ jobs:
     - name: Build Docker Images
       run: |
         cd flood-map-hanoi
-        docker-compose build
+        docker compose build
 
     # ========================================
     # 4. BUILD ANDROID APK
@@ -69,7 +69,9 @@ jobs:
         npx cap sync android
 
     - name: Grant execute permission for gradlew
-      run: chmod +x flood-map-hanoi/frontend/android/gradlew
+      run: |
+        chmod +x flood-map-hanoi/frontend/android/gradlew
+        sed -i 's/\r$//' flood-map-hanoi/frontend/android/gradlew
 
     - name: Build Android APK
       run: |
