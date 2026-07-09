@@ -62,6 +62,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
+                .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/flood-reports/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/flood-reports/**").hasAnyRole("USER", "MOD", "ADMIN")
                 .requestMatchers("/api/user/reports/**").hasAnyRole("USER", "MOD", "ADMIN")
