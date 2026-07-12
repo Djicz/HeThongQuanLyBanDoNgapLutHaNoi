@@ -85,6 +85,21 @@ public class SystemMaintenanceService {
                 updateRelatedZones(report);
             }
         }
+
+        // 3. Check FloodZone expiration directly
+        List<FloodZone> allZones = floodZoneRepository.findAll();
+        for (FloodZone zone : allZones) {
+            if ("ACTIVE".equals(zone.getStatus())) {
+                Date targetDate = zone.getUpdatedAt() != null ? zone.getUpdatedAt() : zone.getCreatedAt();
+                if (targetDate != null) {
+                    long age = now - targetDate.getTime();
+                    if (age > expireMillis) {
+                        zone.setStatus("RESOLVED");
+                        floodZoneRepository.save(zone);
+                    }
+                }
+            }
+        }
     }
 
     private void updateRelatedZones(FloodReport report) {

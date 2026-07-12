@@ -1,0 +1,6 @@
+# Testing and agent artifacts
+logs.zip
+logs_extracted/
+latest_run.json
+gen_tests.py
+.agents/

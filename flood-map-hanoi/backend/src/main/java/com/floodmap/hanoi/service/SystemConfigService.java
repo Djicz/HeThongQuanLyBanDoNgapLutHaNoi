@@ -20,6 +20,9 @@ public class SystemConfigService {
     @Autowired
     private IpVisitLogRepository ipVisitLogRepository;
 
+    @Autowired
+    private SystemMaintenanceService systemMaintenanceService;
+
     public SystemConfig getConfig() {
         List<SystemConfig> configs = configRepository.findAll();
         if (configs.isEmpty()) {
@@ -68,6 +71,11 @@ public class SystemConfigService {
         SystemConfig config = getConfig();
         config.setTotalVisits(config.getTotalVisits() + 1);
         configRepository.save(config);
+        
+        // Trigger maintenance check asynchronously so it doesn't block the request
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            systemMaintenanceService.performMaintenance();
+        });
         
         return true;
     }

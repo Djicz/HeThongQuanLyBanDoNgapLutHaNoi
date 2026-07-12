@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { ClipboardList, CheckCircle, XCircle, Trash2, Loader, Eye, MapPin } from 'lucide-react';
+import ReportDetailModal from '../../components/ReportDetailModal';
 
 const AddressCell: React.FC<{lat: number, lng: number}> = ({lat, lng}) => {
     const [address, setAddress] = useState<string>('Đang tải...');
@@ -40,6 +41,7 @@ const ReportManagement: React.FC = () => {
     const [reports, setReports] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [selectedReport, setSelectedReport] = useState<any>(null);
 
     const isModOrAdmin = user?.role === 'MOD' || user?.role === 'ADMIN';
 
@@ -150,6 +152,9 @@ const ReportManagement: React.FC = () => {
                                     </td>
                                     <td style={{ padding: '1rem' }}>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <button onClick={() => setSelectedReport(r)} className="btn btn-outline" style={{ padding: '0.5rem', color: '#2563eb', borderColor: '#bfdbfe' }} title="Xem chi tiết">
+                                                <ClipboardList size={16} />
+                                            </button>
                                             {r.status === 'PENDING' && (
                                                 <>
                                                     <button onClick={() => handleAction(r.id, 'verify')} className="btn btn-outline" style={{ padding: '0.5rem', color: '#16a34a', borderColor: '#bbf7d0' }} title="Duyệt">
@@ -173,6 +178,8 @@ const ReportManagement: React.FC = () => {
                     </table>
                 )}
             </div>
+
+            <ReportDetailModal report={selectedReport} onClose={() => setSelectedReport(null)} />
         </div>
     );
 };

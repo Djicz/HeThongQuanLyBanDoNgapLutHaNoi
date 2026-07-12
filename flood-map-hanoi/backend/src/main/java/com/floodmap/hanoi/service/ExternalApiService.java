@@ -43,18 +43,20 @@ public class ExternalApiService {
 
     public String searchGeocode(String query) {
         try {
-            String url = String.format("https://nominatim.openstreetmap.org/search?format=json&q=%s&limit=1", query);
+            String url = String.format("https://nominatim.openstreetmap.org/search?format=json&q=%s&limit=5", query);
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, getEntityWithUserAgent(), String.class);
             ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(response.getBody());
             ArrayNode resultArray = mapper.createArrayNode();
             
-            if (root.isArray() && root.size() > 0) {
-                JsonNode first = root.get(0);
-                ObjectNode obj = mapper.createObjectNode();
-                obj.put("lat", first.path("lat").asText());
-                obj.put("lon", first.path("lon").asText());
-                resultArray.add(obj);
+            if (root.isArray()) {
+                for (JsonNode node : root) {
+                    ObjectNode obj = mapper.createObjectNode();
+                    obj.put("lat", node.path("lat").asText());
+                    obj.put("lon", node.path("lon").asText());
+                    obj.put("display_name", node.path("display_name").asText());
+                    resultArray.add(obj);
+                }
             }
             return resultArray.toString();
         } catch (Exception e) {

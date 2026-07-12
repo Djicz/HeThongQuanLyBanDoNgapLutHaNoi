@@ -5,6 +5,7 @@ import { ClipboardList, Trash2, Loader, ArrowLeft, Plus, MapPin, Upload } from '
 import { useMapState } from '../../context/MapContext';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
+import ReportDetailModal from '../../components/ReportDetailModal';
 
 const AddressCell: React.FC<{lat: number, lng: number}> = ({lat, lng}) => {
     const [address, setAddress] = useState<string>('Đang tải...');
@@ -57,6 +58,7 @@ const MyReports: React.FC = () => {
     const [reports, setReports] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [selectedReport, setSelectedReport] = useState<any>(null);
 
     const [showForm, setShowForm] = useState(false);
     const [showMap, setShowMap] = useState(false);
@@ -82,10 +84,24 @@ const MyReports: React.FC = () => {
         }
     }, [formData.lat, formData.lng, showForm]);
 
+    const isManualLocationRef = React.useRef(false);
+
     const handleCreateNewReport = () => {
+        // Luôn luôn reset form về mặc định mỗi khi mở lại để tránh bị "khóa" trạng thái cũ
+        setFormData({ lat: 21.0285, lng: 105.8542, level: 'MEDIUM', description: '' });
+        isManualLocationRef.current = false;
+        
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (pos) => setFormData(prev => ({ ...prev, lat: pos.coords.latitude, lng: pos.coords.longitude }))
+                (pos) => {
+                    if (!isManualLocationRef.current) {
+                        setFormData(prev => ({ ...prev, lat: pos.coords.latitude, lng: pos.coords.longitude }));
+                    }
+                },
+                (error) => {
+                    console.error("Lỗi lấy GPS:", error);
+                },
+                { timeout: 10000, maximumAge: 0 } 
             );
         }
         setShowForm(true);
@@ -93,6 +109,7 @@ const MyReports: React.FC = () => {
 
     const handleMapLocationSelect = (lat: number, lng: number) => {
         setFormData(prev => ({ ...prev, lat, lng }));
+        isManualLocationRef.current = true;
         setShowMap(false);
     };
 
@@ -242,11 +259,16 @@ const MyReports: React.FC = () => {
                                         {new Date(r.createdAt).toLocaleString('vi-VN')}
                                     </td>
                                     <td style={{ padding: '1rem' }}>
-                                        {r.status !== 'DELETED' && (
-                                            <button onClick={() => handleDelete(r.id)} className="btn btn-outline" style={{ padding: '0.5rem', color: '#dc2626', borderColor: '#fecaca' }} title="Xóa">
-                                                <Trash2 size={16} />
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <button onClick={() => setSelectedReport(r)} className="btn btn-outline" style={{ padding: '0.5rem', color: '#2563eb', borderColor: '#bfdbfe' }} title="Xem chi tiết">
+                                                <ClipboardList size={16} />
                                             </button>
-                                        )}
+                                            {r.status !== 'DELETED' && (
+                                                <button onClick={() => handleDelete(r.id)} className="btn btn-outline" style={{ padding: '0.5rem', color: '#dc2626', borderColor: '#fecaca' }} title="Xóa">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -310,6 +332,8 @@ const MyReports: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            <ReportDetailModal report={selectedReport} onClose={() => setSelectedReport(null)} />
         </div>
     );
 };

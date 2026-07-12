@@ -210,6 +210,62 @@ export default function FloodMap() {
 
   const [alertRadius, setAlertRadius] = useState(500);
 
+  const [startSuggestions, setStartSuggestions] = useState<any[]>([]);
+  const [endSuggestions, setEndSuggestions] = useState<any[]>([]);
+  const [showStartSuggestions, setShowStartSuggestions] = useState(false);
+  const [showEndSuggestions, setShowEndSuggestions] = useState(false);
+  const startTimeoutRef = useRef<any>(null);
+  const endTimeoutRef = useRef<any>(null);
+
+  const fetchSuggestions = async (query: string, type: 'start' | 'end') => {
+      if (!query || query.length < 2) {
+          if (type === 'start') setStartSuggestions([]);
+          else setEndSuggestions([]);
+          return;
+      }
+      try {
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/public/external/nominatim/search?q=${encodeURIComponent(query)}`);
+          const data = await res.json();
+          if (type === 'start') {
+              setStartSuggestions(data);
+              setShowStartSuggestions(true);
+          } else {
+              setEndSuggestions(data);
+              setShowEndSuggestions(true);
+          }
+      } catch (err) {
+          console.error("Lỗi lấy gợi ý", err);
+      }
+  };
+
+  const handleStartChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value;
+      setStartAddress(val);
+      setRouteStart(null);
+      if (startTimeoutRef.current) clearTimeout(startTimeoutRef.current);
+      startTimeoutRef.current = setTimeout(() => fetchSuggestions(val, 'start'), 500);
+  };
+
+  const handleEndChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value;
+      setEndAddress(val);
+      setRouteEnd(null);
+      if (endTimeoutRef.current) clearTimeout(endTimeoutRef.current);
+      endTimeoutRef.current = setTimeout(() => fetchSuggestions(val, 'end'), 500);
+  };
+
+  const selectStartSuggestion = (sug: any) => {
+      setStartAddress(sug.display_name);
+      setRouteStart(new L.LatLng(parseFloat(sug.lat), parseFloat(sug.lon)));
+      setShowStartSuggestions(false);
+  };
+
+  const selectEndSuggestion = (sug: any) => {
+      setEndAddress(sug.display_name);
+      setRouteEnd(new L.LatLng(parseFloat(sug.lat), parseFloat(sug.lon)));
+      setShowEndSuggestions(false);
+  };
+
   useEffect(() => {
       const queryParams = new URLSearchParams(location.search);
       const lat = queryParams.get('lat');
@@ -676,14 +732,39 @@ export default function FloodMap() {
               <div style={{ marginBottom: '1rem' }}>
                   <label style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', marginBottom: '0.25rem' }}>Điểm xuất phát</label>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <input 
-                          type="text" 
-                          className="form-control" 
-                          placeholder="Vị trí hiện tại hoặc nhập địa chỉ..." 
-                          value={startAddress}
-                          onChange={(e) => { setStartAddress(e.target.value); setRouteStart(null); }}
-                          style={{ flex: 1, padding: '0.5rem' }}
-                      />
+                      <div style={{ position: 'relative', flex: 1 }}>
+                          <input 
+                              type="text" 
+                              className="form-control" 
+                              placeholder="Vị trí hiện tại hoặc nhập địa chỉ..." 
+                              value={startAddress}
+                              onChange={handleStartChange}
+                              onFocus={() => setShowStartSuggestions(startSuggestions.length > 0)}
+                              onBlur={() => setTimeout(() => setShowStartSuggestions(false), 200)}
+                              style={{ width: '100%', padding: '0.5rem', boxSizing: 'border-box' }}
+                          />
+                          {showStartSuggestions && startSuggestions.length > 0 && (
+                              <ul style={{
+                                  position: 'absolute', top: '100%', left: 0, right: 0, 
+                                  backgroundColor: 'var(--bg-panel)', border: 'var(--glass-border)', 
+                                  boxShadow: 'var(--shadow-md)', borderRadius: '8px', 
+                                  maxHeight: '200px', overflowY: 'auto', zIndex: 1001,
+                                  listStyle: 'none', padding: 0, margin: '4px 0 0 0',
+                                  textAlign: 'left'
+                              }}>
+                                  {startSuggestions.map((sug, i) => (
+                                      <li key={i} 
+                                          onClick={() => selectStartSuggestion(sug)}
+                                          style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)', fontSize: '0.85rem', color: 'var(--text-main)' }}
+                                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-hover)')}
+                                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                      >
+                                          {sug.display_name}
+                                      </li>
+                                  ))}
+                              </ul>
+                          )}
+                      </div>
                       <button 
                           className="btn btn-outline" 
                           onClick={handleUseCurrentLocationForStart}
@@ -704,14 +785,39 @@ export default function FloodMap() {
               <div style={{ marginBottom: '1.5rem' }}>
                   <label style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', marginBottom: '0.25rem' }}>Điểm đến</label>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <input 
-                          type="text" 
-                          className="form-control" 
-                          placeholder="Nhập địa chỉ điểm đến..." 
-                          value={endAddress}
-                          onChange={(e) => { setEndAddress(e.target.value); setRouteEnd(null); }}
-                          style={{ flex: 1, padding: '0.5rem' }}
-                      />
+                      <div style={{ position: 'relative', flex: 1 }}>
+                          <input 
+                              type="text" 
+                              className="form-control" 
+                              placeholder="Nhập địa chỉ điểm đến..." 
+                              value={endAddress}
+                              onChange={handleEndChange}
+                              onFocus={() => setShowEndSuggestions(endSuggestions.length > 0)}
+                              onBlur={() => setTimeout(() => setShowEndSuggestions(false), 200)}
+                              style={{ width: '100%', padding: '0.5rem', boxSizing: 'border-box' }}
+                          />
+                          {showEndSuggestions && endSuggestions.length > 0 && (
+                              <ul style={{
+                                  position: 'absolute', top: '100%', left: 0, right: 0, 
+                                  backgroundColor: 'var(--bg-panel)', border: 'var(--glass-border)', 
+                                  boxShadow: 'var(--shadow-md)', borderRadius: '8px', 
+                                  maxHeight: '200px', overflowY: 'auto', zIndex: 1001,
+                                  listStyle: 'none', padding: 0, margin: '4px 0 0 0',
+                                  textAlign: 'left'
+                              }}>
+                                  {endSuggestions.map((sug, i) => (
+                                      <li key={i} 
+                                          onClick={() => selectEndSuggestion(sug)}
+                                          style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)', fontSize: '0.85rem', color: 'var(--text-main)' }}
+                                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-hover)')}
+                                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                      >
+                                          {sug.display_name}
+                                      </li>
+                                  ))}
+                              </ul>
+                          )}
+                      </div>
                       <button 
                           className="btn btn-outline" 
                           onClick={() => { setMapClickMode('ROUTE_END'); setIsSearchOpen(false); }}
@@ -761,6 +867,22 @@ export default function FloodMap() {
               width: '90%',
               maxWidth: '400px'
           }}>
+              <div style={{
+                  background: floodedAreasCount > 0 ? '#fee2e2' : '#dcfce7',
+                  color: floodedAreasCount > 0 ? '#dc2626' : '#16a34a',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '8px',
+                  boxShadow: 'var(--shadow-md)',
+                  fontWeight: '600',
+                  fontSize: '0.9rem',
+                  textAlign: 'center',
+                  border: `1px solid ${floodedAreasCount > 0 ? '#fca5a5' : '#86efac'}`
+              }}>
+                  {floodedAreasCount > 0 
+                      ? `Cảnh báo: Lộ trình đi qua ${floodedAreasCount} điểm ngập` 
+                      : 'Lộ trình an toàn (không có điểm ngập)'}
+              </div>
+
               {isNavigating && currentInstruction && (
                   <div style={{
                       background: 'var(--surface)',
