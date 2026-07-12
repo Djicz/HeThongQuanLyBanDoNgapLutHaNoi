@@ -35,35 +35,7 @@ interface FloodReportDTO {
     proofImage?: string;
 }
 
-function distance(lat1: number, lon1: number, lat2: number, lon2: number) {
-    const R = 6371e3; // metres
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
 
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-        Math.cos(φ1) * Math.cos(φ2) *
-        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c;
-}
-
-function countFloodedAreas(path: [number, number][], reports: FloodReportDTO[], radius: number) {
-    const verifiedReports = reports.filter(r => r.status === 'VERIFIED');
-    let count = 0;
-    for (const report of verifiedReports) {
-        for (const pt of path) {
-            const dist = distance(pt[0], pt[1], report.lat, report.lng);
-            if (dist <= radius) {
-                count++;
-                break;
-            }
-        }
-    }
-    return count;
-}
 
 function MapController({ center, zoom, onZoomChange, onCenterChange }: { center: L.LatLngTuple, zoom: number, onZoomChange?: (z: number) => void, onCenterChange?: (c: L.LatLngTuple) => void }) {
     const map = useMap();
@@ -195,7 +167,7 @@ export default function FloodMap() {
         isSearchOpen, setIsSearchOpen
     } = useMapState();
 
-    const [alternativeRoutes, setAlternativeRoutes] = useState<[number, number][][]>([]);
+
 
     const [startAddress, setStartAddress] = useState('');
     const [endAddress, setEndAddress] = useState('');
@@ -486,21 +458,21 @@ export default function FloodMap() {
     const [currentInstruction, setCurrentInstruction] = useState<string>('');
     const [routeInstructions, setRouteInstructions] = useState<any[]>([]);
 
+    const verifiedReportsHash = reports.filter(r => r.status === 'VERIFIED').map(r => r.id).sort().join(',');
+
     useEffect(() => {
         if (routeStart && routeEnd) {
             fetch(`${import.meta.env.VITE_API_URL}/public/external/osrm/route?startLng=${routeStart.lng}&startLat=${routeStart.lat}&endLng=${routeEnd.lng}&endLat=${routeEnd.lat}&vehicleType=${vehicleType}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.routes && data.routes.length > 0) {
-                        // Parse alternative routes
-                        const routesPaths = data.routes.map((route: any) => {
-                            const coords = route.geometry.coordinates;
-                            return coords.map((c: any) => [c[1], c[0]]);
-                        });
-                        setAlternativeRoutes(routesPaths);
-
-                        // Parse instructions for the best route (usually first route)
                         const route = data.routes[0];
+                        const coords = route.geometry.coordinates;
+                        const bestPath = coords.map((c: any) => [c[1], c[0]]);
+                        
+                        setRoutePath(bestPath);
+                        setFloodedAreasCount(data.floodedAreasCount || 0);
+
                         if (route.legs && route.legs.length > 0 && route.legs[0].steps) {
                             setRouteInstructions(route.legs[0].steps);
                             if (route.legs[0].steps.length > 0) {
@@ -511,11 +483,12 @@ export default function FloodMap() {
                 })
                 .catch(console.error);
         } else {
-            setAlternativeRoutes([]);
+            setRoutePath([]);
+            setFloodedAreasCount(0);
             setRouteInstructions([]);
             setCurrentInstruction('');
         }
-    }, [routeStart, routeEnd, vehicleType]);
+    }, [routeStart, routeEnd, vehicleType, verifiedReportsHash]);
 
     const updateInstructionText = (step: any) => {
         if (!step || !step.maneuver) return;
@@ -535,25 +508,7 @@ export default function FloodMap() {
         setCurrentInstruction(`${text}${name} (${Math.round(step.distance)}m)`);
     };
 
-    useEffect(() => {
-        if (alternativeRoutes.length > 0) {
-            let bestPath = alternativeRoutes[0];
-            let minFlooded = Infinity;
-            for (const path of alternativeRoutes) {
-                const count = countFloodedAreas(path, reports, alertRadius);
-                if (count < minFlooded) {
-                    minFlooded = count;
-                    bestPath = path;
-                }
-                if (count === 0) break;
-            }
-            setRoutePath(bestPath);
-            setFloodedAreasCount(minFlooded);
-        } else {
-            setRoutePath([]);
-            setFloodedAreasCount(0);
-        }
-    }, [alternativeRoutes, reports, alertRadius]);
+
 
     const handleUseCurrentLocationForStart = async () => {
         try {
@@ -616,7 +571,6 @@ export default function FloodMap() {
         setStartAddress('');
         setEndAddress('');
         setRoutePath([]);
-        setAlternativeRoutes([]);
         setRouteInstructions([]);
         setCurrentInstruction('');
     };

@@ -30,13 +30,13 @@ public class ExternalApiController {
     }
 
     @GetMapping("/osrm/route")
-    public ResponseEntity<String> getRoute(
+    public ResponseEntity<String> countFloodedAreas(
             @RequestParam double startLng, 
             @RequestParam double startLat, 
             @RequestParam double endLng, 
             @RequestParam double endLat,
             @RequestParam(defaultValue = "driving") String vehicleType) {
-        String result = externalApiService.getRoute(startLng, startLat, endLng, endLat, vehicleType);
+        String result = externalApiService.countFloodedAreas(startLng, startLat, endLng, endLat, vehicleType);
         return ResponseEntity.ok(result);
     }
 }
