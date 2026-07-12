@@ -43,7 +43,8 @@ public class ExternalApiService {
 
     public String searchGeocode(String query) {
         try {
-            String url = String.format("https://nominatim.openstreetmap.org/search?format=json&q=%s&limit=5", query);
+            String encodedQuery = java.net.URLEncoder.encode(query, java.nio.charset.StandardCharsets.UTF_8.toString());
+            String url = "https://nominatim.openstreetmap.org/search?format=json&q=" + encodedQuery + "&limit=5";
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, getEntityWithUserAgent(), String.class);
             ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(response.getBody());

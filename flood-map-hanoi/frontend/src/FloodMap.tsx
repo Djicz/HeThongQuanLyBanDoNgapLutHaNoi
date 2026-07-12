@@ -380,6 +380,17 @@ export default function FloodMap() {
   }, []);
 
   useEffect(() => {
+      // A report that is no longer VERIFIED must be eligible for a new alert
+      // if a moderator activates it again, even when the phone stayed nearby.
+      const activeReportIds = new Set(
+          reports.filter(report => report.status === 'VERIFIED').map(report => report.id)
+      );
+      notifiedReports.current.forEach(id => {
+          if (!activeReportIds.has(id)) notifiedReports.current.delete(id);
+      });
+  }, [reports]);
+
+  useEffect(() => {
       let watcherId: string | null = null;
       
       const startBackgroundTracking = async () => {
@@ -390,7 +401,9 @@ export default function FloodMap() {
                       backgroundTitle: "Cảnh báo ngập lụt đang chạy",
                       requestPermissions: true,
                       stale: false,
-                      distanceFilter: 10 // Trigger every 10 meters of movement
+                      // Let the watcher re-evaluate after a report refresh even
+                      // when the user has not moved 10 metres.
+                      distanceFilter: 0
                   },
                   function callback(location: any, error: any) {
                       if (error) {
@@ -404,7 +417,7 @@ export default function FloodMap() {
                       const userLng = location.longitude;
                       
                       const closeReports = reports.filter(r => {
-                          if (r.level === 'LOW') return false;
+                          if (r.status !== 'VERIFIED' || r.level === 'LOW') return false;
                           const dist = Math.sqrt(Math.pow(r.lat - userLat, 2) + Math.pow(r.lng - userLng, 2)) * 111; // approx km
                           return dist <= (alertRadius / 1000);
                       });

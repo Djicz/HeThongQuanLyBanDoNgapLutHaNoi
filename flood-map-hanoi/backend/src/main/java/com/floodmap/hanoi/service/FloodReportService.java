@@ -355,12 +355,6 @@ public class FloodReportService {
         if (reportOpt.isPresent()) {
             FloodReport report = reportOpt.get();
             if (!"DELETED".equals(report.getStatus())) {
-                User author = report.getUser();
-                if (author != null) {
-                    int netPoints = report.getUpvotes() - report.getDownvotes();
-                    author.setReputationPoint(author.getReputationPoint() - netPoints);
-                    userRepository.save(author);
-                }
                 report.setStatus("DELETED"); // Soft delete
                 floodReportRepository.save(report);
             }
@@ -383,12 +377,6 @@ public class FloodReportService {
             }
             if ("DELETED".equals(report.getStatus())) {
                 return "Báo cáo đã bị xóa trước đó";
-            }
-            User author = report.getUser();
-            if (author != null) {
-                int netPoints = report.getUpvotes() - report.getDownvotes();
-                author.setReputationPoint(author.getReputationPoint() - netPoints);
-                userRepository.save(author);
             }
             report.setStatus("DELETED");
             floodReportRepository.save(report);

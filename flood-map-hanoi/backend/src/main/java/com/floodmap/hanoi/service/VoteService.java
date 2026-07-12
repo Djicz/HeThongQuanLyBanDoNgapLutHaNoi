@@ -109,6 +109,8 @@ public class VoteService {
     private void processVoteForReport(FloodReport report, User currentUser, boolean isUpvote) {
         Optional<ReportVote> existingVoteOpt = reportVoteRepository.findByUserIdAndReportId(currentUser.getId(), report.getId());
         User author = report.getUser();
+        boolean affectsReputation = !"PENDING".equals(report.getStatus())
+                && !"REJECTED".equals(report.getStatus());
 
         if (existingVoteOpt.isPresent()) {
             ReportVote existingVote = existingVoteOpt.get();
@@ -123,11 +125,11 @@ public class VoteService {
             if (isUpvote) {
                 report.setUpvotes(report.getUpvotes() + 1);
                 report.setDownvotes(Math.max(0, report.getDownvotes() - 1));
-                if (author != null) author.setReputationPoint(author.getReputationPoint() + 2);
+                if (affectsReputation && author != null) author.setReputationPoint(author.getReputationPoint() + 2);
             } else {
                 report.setDownvotes(report.getDownvotes() + 1);
                 report.setUpvotes(Math.max(0, report.getUpvotes() - 1));
-                if (author != null) author.setReputationPoint(author.getReputationPoint() - 2);
+                if (affectsReputation && author != null) author.setReputationPoint(author.getReputationPoint() - 2);
             }
         } else {
             // New vote
@@ -140,10 +142,10 @@ public class VoteService {
 
             if (isUpvote) {
                 report.setUpvotes(report.getUpvotes() + 1);
-                if (author != null) author.setReputationPoint(author.getReputationPoint() + 1);
+                if (affectsReputation && author != null) author.setReputationPoint(author.getReputationPoint() + 1);
             } else {
                 report.setDownvotes(report.getDownvotes() + 1);
-                if (author != null) author.setReputationPoint(author.getReputationPoint() - 1);
+                if (affectsReputation && author != null) author.setReputationPoint(author.getReputationPoint() - 1);
             }
         }
 

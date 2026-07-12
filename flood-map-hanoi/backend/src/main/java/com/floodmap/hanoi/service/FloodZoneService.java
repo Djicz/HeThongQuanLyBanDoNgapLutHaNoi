@@ -104,7 +104,7 @@ public class FloodZoneService {
         Optional<FloodReport> reportOpt = floodReportRepository.findById(id);
         if (reportOpt.isPresent()) {
             FloodReport report = reportOpt.get();
-            report.setStatus("RESOLVED");
+            report.setStatus("DELETED");
             floodReportRepository.save(report);
             return true;
         }

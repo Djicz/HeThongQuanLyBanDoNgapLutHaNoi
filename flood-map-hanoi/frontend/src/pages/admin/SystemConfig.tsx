@@ -93,14 +93,14 @@ const SystemConfig: React.FC = () => {
                         <div style={{ background: '#e0e7ff', color: '#4f46e5', padding: '1rem', borderRadius: '50%', height: 'fit-content' }}>
                             <ShieldAlert size={28} />
                         </div>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: '#334155', fontSize: '1.1rem' }}>
                                 Bán kính nhận cảnh báo ngập (mét)
                             </label>
                             <input 
                                 type="number" 
                                 className="form-control"
-                                style={{ width: '100%', maxWidth: '300px', fontSize: '1.1rem', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                style={{ width: '100%', maxWidth: '300px', boxSizing: 'border-box', fontSize: '1.1rem', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                                 value={config.alertRadius}
                                 onChange={e => setConfig({...config, alertRadius: Number(e.target.value)})}
                                 min="0"
@@ -116,14 +116,14 @@ const SystemConfig: React.FC = () => {
                         <div style={{ background: '#fef3c7', color: '#d97706', padding: '1rem', borderRadius: '50%', height: 'fit-content' }}>
                             <Clock size={28} />
                         </div>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: '#334155', fontSize: '1.1rem' }}>
                                 Thời gian tự động hết hạn (giờ)
                             </label>
                             <input 
                                 type="number" 
                                 className="form-control"
-                                style={{ width: '100%', maxWidth: '300px', fontSize: '1.1rem', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                style={{ width: '100%', maxWidth: '300px', boxSizing: 'border-box', fontSize: '1.1rem', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                                 value={config.reportExpired}
                                 onChange={e => setConfig({...config, reportExpired: Number(e.target.value)})}
                                 min="0"
@@ -138,7 +138,7 @@ const SystemConfig: React.FC = () => {
                         <div style={{ background: '#fee2e2', color: '#dc2626', padding: '1rem', borderRadius: '50%', height: 'fit-content' }}>
                             <ShieldX size={28} />
                         </div>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: '#334155', fontSize: '1.1rem' }}>
                                 Ngưỡng tự động xóa báo cáo (%)
                             </label>
@@ -146,7 +146,7 @@ const SystemConfig: React.FC = () => {
                                 <input 
                                     type="number" 
                                     className="form-control"
-                                    style={{ width: '100%', maxWidth: '300px', fontSize: '1.1rem', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                    style={{ width: '100%', maxWidth: '300px', boxSizing: 'border-box', fontSize: '1.1rem', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                                     value={config.autoDeletePercent}
                                     onChange={e => setConfig({...config, autoDeletePercent: Number(e.target.value)})}
                                     min="0"
