@@ -8,7 +8,7 @@ const FloodPointManagement: React.FC = () => {
     const [zones, setZones] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    
+
     const [editingZone, setEditingZone] = useState<any>(null);
     const [saving, setSaving] = useState(false);
 
@@ -17,6 +17,8 @@ const FloodPointManagement: React.FC = () => {
     useEffect(() => {
         if (isModOrAdmin) {
             fetchZones();
+            const interval = setInterval(fetchZones, 1000);
+            return () => clearInterval(interval);
         }
     }, [isModOrAdmin, token]);
 
@@ -42,14 +44,14 @@ const FloodPointManagement: React.FC = () => {
         try {
             const response = await fetch(`${import.meta.env.VITE_API_URL}/mod/zones/${editingZone.id}`, {
                 method: 'PUT',
-                headers: { 
+                headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(editingZone)
             });
             if (!response.ok) throw new Error('Lỗi khi cập nhật vùng ngập');
-            
+
             setEditingZone(null);
             fetchZones();
         } catch (err: any) {
@@ -95,29 +97,29 @@ const FloodPointManagement: React.FC = () => {
                             <h3 style={{ margin: 0 }}>Cập nhật điểm ngập</h3>
                             <button type="button" onClick={() => setEditingZone(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X /></button>
                         </div>
-                        
+
                         <div style={{ marginBottom: '1rem' }}>
                             <label style={{ display: 'block', marginBottom: '0.5rem' }}>Mức độ ngập</label>
-                            <select className="form-control" value={editingZone.level} onChange={e => setEditingZone({...editingZone, level: e.target.value})}>
+                            <select className="form-control" value={editingZone.level} onChange={e => setEditingZone({ ...editingZone, level: e.target.value })}>
                                 <option value="LOW">Nhẹ (LOW)</option>
                                 <option value="MEDIUM">Trung bình (MEDIUM)</option>
                                 <option value="HIGH">Nặng (HIGH)</option>
                             </select>
                         </div>
-                        
+
                         <div style={{ marginBottom: '1rem' }}>
                             <label style={{ display: 'block', marginBottom: '0.5rem' }}>Mô tả</label>
-                            <textarea className="form-control" rows={3} value={editingZone.description || ''} onChange={e => setEditingZone({...editingZone, description: e.target.value})}></textarea>
+                            <textarea className="form-control" rows={3} value={editingZone.description || ''} onChange={e => setEditingZone({ ...editingZone, description: e.target.value })}></textarea>
                         </div>
 
                         <div style={{ marginBottom: '1.5rem' }}>
                             <label style={{ display: 'block', marginBottom: '0.5rem' }}>Trạng thái</label>
-                            <select className="form-control" value={editingZone.status} onChange={e => setEditingZone({...editingZone, status: e.target.value})}>
+                            <select className="form-control" value={editingZone.status} onChange={e => setEditingZone({ ...editingZone, status: e.target.value })}>
                                 <option value="ACTIVE">Đang ngập (ACTIVE)</option>
                                 <option value="RESOLVED">Đã rút (RESOLVED)</option>
                             </select>
                         </div>
-                        
+
                         <button type="submit" className="btn btn-primary" disabled={saving} style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px' }}>
                             {saving ? <Loader className="animate-spin" size={16} /> : <Save size={16} />} Lưu thay đổi
                         </button>
@@ -146,9 +148,9 @@ const FloodPointManagement: React.FC = () => {
                                     <td style={{ padding: '1rem' }}>{z.description || 'N/A'}</td>
                                     <td style={{ padding: '1rem' }}>{z.radius}</td>
                                     <td style={{ padding: '1rem' }}>
-                                        <span style={{ 
-                                            padding: '0.25rem 0.5rem', 
-                                            borderRadius: '9999px', 
+                                        <span style={{
+                                            padding: '0.25rem 0.5rem',
+                                            borderRadius: '9999px',
                                             fontSize: '0.75rem',
                                             backgroundColor: z.level === 'HIGH' ? '#fee2e2' : z.level === 'MEDIUM' ? '#fef3c7' : '#dcfce7',
                                             color: z.level === 'HIGH' ? '#dc2626' : z.level === 'MEDIUM' ? '#d97706' : '#16a34a'

@@ -69,7 +69,8 @@ public class FloodReportController {
             FloodReport savedReport = floodReportService.createReport(lat, lng, level, description, image, currentUser);
             return ResponseEntity.ok(savedReport);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("Lỗi khi tải ảnh lên hoặc lưu báo cáo");
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Lỗi khi tải ảnh lên hoặc lưu báo cáo: " + e.getMessage());
         }
     }
 }

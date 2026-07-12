@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { ClipboardList, CheckCircle, XCircle, Trash2, Loader, Eye, MapPin } from 'lucide-react';
 import ReportDetailModal from '../../components/ReportDetailModal';
 
-const AddressCell: React.FC<{lat: number, lng: number}> = ({lat, lng}) => {
+const AddressCell: React.FC<{ lat: number, lng: number }> = ({ lat, lng }) => {
     const [address, setAddress] = useState<string>('Đang tải...');
 
     useEffect(() => {
@@ -48,6 +48,8 @@ const ReportManagement: React.FC = () => {
     useEffect(() => {
         if (isModOrAdmin) {
             fetchReports();
+            const interval = setInterval(fetchReports, 1000);
+            return () => clearInterval(interval);
         }
     }, [isModOrAdmin, token]);
 
@@ -68,7 +70,7 @@ const ReportManagement: React.FC = () => {
 
     const handleAction = async (id: string, action: 'verify' | 'reject' | 'delete') => {
         if (action === 'delete' && !confirm('Bạn có chắc chắn muốn xóa báo cáo này?')) return;
-        
+
         try {
             const method = action === 'delete' ? 'DELETE' : 'PUT';
             let url = `${import.meta.env.VITE_API_URL}/mod/reports/${id}`;
@@ -80,7 +82,7 @@ const ReportManagement: React.FC = () => {
                 method,
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            
+
             if (res.ok) {
                 fetchReports();
             } else {
@@ -128,9 +130,9 @@ const ReportManagement: React.FC = () => {
                                 <tr key={r.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
                                     <td style={{ padding: '1rem' }}>{r.description || 'Không có mô tả'}</td>
                                     <td style={{ padding: '1rem' }}>
-                                        <span style={{ 
-                                            padding: '0.25rem 0.5rem', 
-                                            borderRadius: '9999px', 
+                                        <span style={{
+                                            padding: '0.25rem 0.5rem',
+                                            borderRadius: '9999px',
                                             fontSize: '0.75rem',
                                             backgroundColor: r.level === 'HIGH' ? '#fee2e2' : r.level === 'MEDIUM' ? '#fef3c7' : '#dcfce7',
                                             color: r.level === 'HIGH' ? '#dc2626' : r.level === 'MEDIUM' ? '#d97706' : '#16a34a'

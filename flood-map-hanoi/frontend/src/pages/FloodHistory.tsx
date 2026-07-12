@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { History, MapPin, Loader, Droplets, Calendar, BarChart3 } from 'lucide-react';
 
 const FloodHistory: React.FC = () => {
+    const navigate = useNavigate();
     const [historyData, setHistoryData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -39,19 +41,27 @@ const FloodHistory: React.FC = () => {
                 if (!item.lat || !item.lng) continue;
                 if (newAddresses[item.id]) continue; // already fetched
 
+                let addressFound = false;
                 try {
                     const response = await fetch(`${import.meta.env.VITE_API_URL}/public/external/nominatim/reverse?lat=${item.lat}&lng=${item.lng}`);
-                    const data = await response.json();
-                    
-                    if (data && (data.address || data.display_name)) {
-                        const street = data.display_name || (data.address && (data.address.road || data.address.pedestrian || data.address.path || data.address.suburb));
-                        newAddresses[item.id] = street;
-                        if (isMounted) {
-                            setAddresses({ ...newAddresses });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && (data.address || data.display_name)) {
+                            const street = data.display_name || (data.address && (data.address.road || data.address.pedestrian || data.address.path || data.address.suburb));
+                            newAddresses[item.id] = street;
+                            addressFound = true;
                         }
                     }
                 } catch (err) {
                     console.error("Lỗi khi lấy tên đường:", err);
+                }
+                
+                if (!addressFound) {
+                    newAddresses[item.id] = `Vị trí: ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}`;
+                }
+                
+                if (isMounted) {
+                    setAddresses({ ...newAddresses });
                 }
                 
                 // Delay to respect Nominatim usage policy (1 request per second)
@@ -132,9 +142,11 @@ const FloodHistory: React.FC = () => {
                         </div>
                     ) : (
                         filteredData.map((item, index) => (
-                            <div key={item.id || index} style={{ 
+                            <div key={item.id || index} 
+                                onClick={() => navigate(`/?lat=${item.lat}&lng=${item.lng}`)}
+                                style={{ 
                                 background: 'white', borderRadius: '14px', overflow: 'hidden',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.08)', cursor: 'pointer'
                             }}>
                                 <div style={{ height: '3px', background: item.level === 'HIGH' ? '#ef4444' : item.level === 'MEDIUM' ? '#f59e0b' : '#10b981' }} />
                                 <div style={{ padding: '1rem' }}>

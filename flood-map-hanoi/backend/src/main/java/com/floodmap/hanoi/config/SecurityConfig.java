@@ -57,19 +57,19 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.cors().and().csrf().disable()
-            .exceptionHandling().authenticationEntryPoint(unauthorizedHandler).and()
-            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/public/**").permitAll()
-                .requestMatchers("/uploads/**").permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/flood-reports/**").permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/flood-reports/**").hasAnyRole("USER", "MOD", "ADMIN")
-                .requestMatchers("/api/user/reports/**").hasAnyRole("USER", "MOD", "ADMIN")
-                .requestMatchers("/api/history/**").permitAll()
-                .requestMatchers("/api/notifications/**").permitAll()
-                .anyRequest().authenticated()
-            );
+                .exceptionHandling().authenticationEntryPoint(unauthorizedHandler).and()
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/flood-reports/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/flood-reports/**")
+                        .hasAnyRole("USER", "MOD", "ADMIN")
+                        .requestMatchers("/api/user/reports/**").hasAnyRole("USER", "MOD", "ADMIN")
+                        .requestMatchers("/api/history/**").permitAll()
+                        .requestMatchers("/api/notifications/**").permitAll()
+                        .anyRequest().authenticated());
 
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);

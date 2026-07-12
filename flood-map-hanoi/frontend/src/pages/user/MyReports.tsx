@@ -7,7 +7,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import ReportDetailModal from '../../components/ReportDetailModal';
 
-const AddressCell: React.FC<{lat: number, lng: number}> = ({lat, lng}) => {
+const AddressCell: React.FC<{ lat: number, lng: number }> = ({ lat, lng }) => {
     const [address, setAddress] = useState<string>('Đang tải...');
 
     useEffect(() => {
@@ -41,7 +41,7 @@ const AddressCell: React.FC<{lat: number, lng: number}> = ({lat, lng}) => {
 
 function LocationPicker({ onLocationSelect, initialLat, initialLng }: { onLocationSelect: (lat: number, lng: number) => void, initialLat: number, initialLng: number }) {
     const [pos, setPos] = useState<L.LatLng | null>(initialLat ? new L.LatLng(initialLat, initialLng) : null);
-    
+
     useMapEvents({
         click(e) {
             setPos(e.latlng);
@@ -90,7 +90,7 @@ const MyReports: React.FC = () => {
         // Luôn luôn reset form về mặc định mỗi khi mở lại để tránh bị "khóa" trạng thái cũ
         setFormData({ lat: 21.0285, lng: 105.8542, level: 'MEDIUM', description: '' });
         isManualLocationRef.current = false;
-        
+
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
@@ -101,7 +101,7 @@ const MyReports: React.FC = () => {
                 (error) => {
                     console.error("Lỗi lấy GPS:", error);
                 },
-                { timeout: 10000, maximumAge: 0 } 
+                { timeout: 10000, maximumAge: 0 }
             );
         }
         setShowForm(true);
@@ -151,6 +151,8 @@ const MyReports: React.FC = () => {
     useEffect(() => {
         if (user) {
             fetchMyReports();
+            const interval = setInterval(fetchMyReports, 1000);
+            return () => clearInterval(interval);
         }
     }, [user, token]);
 
@@ -171,13 +173,13 @@ const MyReports: React.FC = () => {
 
     const handleDelete = async (id: string) => {
         if (!confirm('Bạn có chắc chắn muốn xóa báo cáo này?')) return;
-        
+
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/user/reports/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            
+
             if (res.ok) {
                 fetchMyReports();
             } else {
@@ -235,9 +237,9 @@ const MyReports: React.FC = () => {
                                 <tr key={r.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
                                     <td style={{ padding: '1rem' }}>{r.description || 'Không có mô tả'}</td>
                                     <td style={{ padding: '1rem' }}>
-                                        <span style={{ 
-                                            padding: '0.25rem 0.5rem', 
-                                            borderRadius: '9999px', 
+                                        <span style={{
+                                            padding: '0.25rem 0.5rem',
+                                            borderRadius: '9999px',
                                             fontSize: '0.75rem',
                                             backgroundColor: r.level === 'HIGH' ? '#fee2e2' : r.level === 'MEDIUM' ? '#fef3c7' : '#dcfce7',
                                             color: r.level === 'HIGH' ? '#dc2626' : r.level === 'MEDIUM' ? '#d97706' : '#16a34a'
@@ -293,7 +295,7 @@ const MyReports: React.FC = () => {
                             </div>
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Mức độ ngập</label>
-                                <select className="form-control" value={formData.level} onChange={(e) => setFormData({...formData, level: e.target.value})}>
+                                <select className="form-control" value={formData.level} onChange={(e) => setFormData({ ...formData, level: e.target.value })}>
                                     <option value="LOW">Thấp</option>
                                     <option value="MEDIUM">Trung bình</option>
                                     <option value="HIGH">Nghiêm trọng</option>
@@ -301,7 +303,7 @@ const MyReports: React.FC = () => {
                             </div>
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Mô tả</label>
-                                <textarea className="form-control" rows={3} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Ngập do mưa lớn, tắc cống..."></textarea>
+                                <textarea className="form-control" rows={3} value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Ngập do mưa lớn, tắc cống..."></textarea>
                             </div>
                             <div style={{ marginBottom: '1.5rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Ảnh minh chứng</label>

@@ -57,7 +57,7 @@ public class FloodReportService {
         double lonDistance = Math.toRadians(lon2 - lon1);
         double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+                        * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     }
@@ -66,7 +66,7 @@ public class FloodReportService {
     public Map<String, Object> getGeneralStats() {
         long totalUsers = userRepository.count();
         long totalReports = floodReportRepository.count();
-        
+
         List<SystemConfig> configs = configRepository.findAll();
         long totalVisits = configs.isEmpty() ? 0 : configs.get(0).getTotalVisits();
 
@@ -74,13 +74,13 @@ public class FloodReportService {
         stats.put("totalUsers", totalUsers);
         stats.put("totalReports", totalReports);
         stats.put("totalVisits", totalVisits);
-        
+
         return stats;
     }
 
     public Map<String, Object> getDashboardChartsData() {
         List<FloodReport> reports = floodReportRepository.findAll();
-        
+
         Map<String, Long> countByDistrict = reports.stream()
                 .filter(r -> !"DELETED".equals(r.getStatus()))
                 .filter(r -> r.getDistrict() != null && !r.getDistrict().isEmpty())
@@ -129,7 +129,7 @@ public class FloodReportService {
         Map<String, Object> result = new HashMap<>();
         result.put("reportsByDistrict", reportsByDistrictList);
         result.put("floodRatioByArea", floodRatioByAreaList);
-        
+
         return result;
     }
 
@@ -141,14 +141,16 @@ public class FloodReportService {
 
         List<FloodReport> reports = floodReportRepository.findAll().stream()
                 .filter(r -> !"DELETED".equals(r.getStatus()) && !"PENDING".equals(r.getStatus()))
-                .sorted(Comparator.comparing(FloodReport::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder())))
+                .sorted(Comparator.comparing(FloodReport::getCreatedAt,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
                 .collect(Collectors.toList());
 
         List<FloodHistoryDTO> historyGroups = new ArrayList<>();
 
         for (FloodReport report : reports) {
-            if (report.getLocation() == null) continue;
-            
+            if (report.getLocation() == null)
+                continue;
+
             double lat = report.getLocation().getY();
             double lng = report.getLocation().getX();
 
@@ -157,7 +159,8 @@ public class FloodReportService {
                 double dist = calculateDistance(lat, lng, group.getLat(), group.getLng());
                 if (dist <= distanceThreshold) {
                     group.setFloodCount(group.getFloodCount() + 1);
-                    if (report.getCreatedAt() != null && (group.getLastUpdate() == null || report.getCreatedAt().after(group.getLastUpdate()))) {
+                    if (report.getCreatedAt() != null
+                            && (group.getLastUpdate() == null || report.getCreatedAt().after(group.getLastUpdate()))) {
                         group.setLastUpdate(report.getCreatedAt());
                     }
                     foundGroup = true;
@@ -197,17 +200,20 @@ public class FloodReportService {
         List<FloodReport> allReports = floodReportRepository.findAll();
 
         List<FloodReport> verifiedReports = allReports.stream()
-            .filter(r -> "VERIFIED".equals(r.getStatus()))
-            .sorted(Comparator.comparing(FloodReport::getCreatedAt).reversed())
-            .toList();
+                .filter(r -> "VERIFIED".equals(r.getStatus()))
+                .sorted(Comparator.comparing(FloodReport::getCreatedAt).reversed())
+                .toList();
 
         List<FloodReport> groupedVerified = new ArrayList<>();
         for (FloodReport r : verifiedReports) {
-            if (r.getLocation() == null) continue;
+            if (r.getLocation() == null)
+                continue;
             boolean isCovered = false;
             for (FloodReport g : groupedVerified) {
-                if (g.getLocation() == null) continue;
-                double dist = calculateDistance(r.getLocation().getY(), r.getLocation().getX(), g.getLocation().getY(), g.getLocation().getX());
+                if (g.getLocation() == null)
+                    continue;
+                double dist = calculateDistance(r.getLocation().getY(), r.getLocation().getX(), g.getLocation().getY(),
+                        g.getLocation().getX());
                 if (dist <= distanceThreshold) {
                     isCovered = true;
                     break;
@@ -219,9 +225,9 @@ public class FloodReportService {
         }
 
         List<FloodReport> userOtherReports = allReports.stream()
-            .filter(r -> currentUserId != null && r.getUser() != null && r.getUser().getId().equals(currentUserId))
-            .filter(r -> !"VERIFIED".equals(r.getStatus()) && !"DELETED".equals(r.getStatus()))
-            .toList();
+                .filter(r -> currentUserId != null && r.getUser() != null && r.getUser().getId().equals(currentUserId))
+                .filter(r -> !"VERIFIED".equals(r.getStatus()) && !"DELETED".equals(r.getStatus()))
+                .toList();
 
         List<FloodReport> finalReports = new ArrayList<>(groupedVerified);
         finalReports.addAll(userOtherReports);
@@ -248,13 +254,14 @@ public class FloodReportService {
         }).toList();
     }
 
-    public FloodReport createReport(double lat, double lng, String level, String description, MultipartFile image, User currentUser) throws Exception {
+    public FloodReport createReport(double lat, double lng, String level, String description, MultipartFile image,
+            User currentUser) throws Exception {
         FloodReport report = new FloodReport();
         report.setLevel(level);
         report.setDescription(description);
-        report.setStatus("PENDING"); 
+        report.setStatus("PENDING");
         report.setUser(currentUser);
-        
+
         Point point = geometryFactory.createPoint(new Coordinate(lng, lat));
         report.setLocation(point);
 
@@ -264,9 +271,12 @@ public class FloodReportService {
             JsonNode addressNode = root.path("address");
             if (!addressNode.isMissingNode()) {
                 String district = addressNode.path("city_district").asText(null);
-                if (district == null) district = addressNode.path("county").asText(null);
-                if (district == null) district = addressNode.path("suburb").asText(null);
-                if (district == null) district = addressNode.path("state_district").asText(null);
+                if (district == null)
+                    district = addressNode.path("county").asText(null);
+                if (district == null)
+                    district = addressNode.path("suburb").asText(null);
+                if (district == null)
+                    district = addressNode.path("state_district").asText(null);
                 report.setDistrict(district != null ? district : "Không xác định");
             } else {
                 report.setDistrict("Không xác định");
@@ -284,12 +294,12 @@ public class FloodReportService {
             String filename = UUID.randomUUID().toString() + "_" + image.getOriginalFilename();
             Path filePath = uploadPath.resolve(filename);
             Files.copy(image.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            
+
             Proof proof = new Proof();
             proof.setFileUrl("/uploads/" + filename);
             proof.setType("IMAGE");
             proof.setFloodReport(report);
-            
+
             List<Proof> proofs = new ArrayList<>();
             proofs.add(proof);
             report.setProofs(proofs);
@@ -393,7 +403,8 @@ public class FloodReportService {
     public void backfillDistricts() {
         List<FloodReport> reports = floodReportRepository.findAll();
         for (FloodReport report : reports) {
-            if (report.getDistrict() == null || report.getDistrict().isEmpty() || report.getDistrict().equals("Không xác định")) {
+            if (report.getDistrict() == null || report.getDistrict().isEmpty()
+                    || report.getDistrict().equals("Không xác định")) {
                 if (report.getLocation() != null) {
                     double lat = report.getLocation().getY();
                     double lng = report.getLocation().getX();
@@ -403,9 +414,12 @@ public class FloodReportService {
                         JsonNode addressNode = root.path("address");
                         if (!addressNode.isMissingNode()) {
                             String district = addressNode.path("city_district").asText(null);
-                            if (district == null) district = addressNode.path("county").asText(null);
-                            if (district == null) district = addressNode.path("suburb").asText(null);
-                            if (district == null) district = addressNode.path("state_district").asText(null);
+                            if (district == null)
+                                district = addressNode.path("county").asText(null);
+                            if (district == null)
+                                district = addressNode.path("suburb").asText(null);
+                            if (district == null)
+                                district = addressNode.path("state_district").asText(null);
                             report.setDistrict(district != null ? district : "Không xác định");
                             floodReportRepository.save(report);
                         }
@@ -419,7 +433,8 @@ public class FloodReportService {
 
         List<FloodZone> zones = zoneRepository.findAll();
         for (FloodZone zone : zones) {
-            if (zone.getDistrict() == null || zone.getDistrict().isEmpty() || zone.getDistrict().equals("Không xác định")) {
+            if (zone.getDistrict() == null || zone.getDistrict().isEmpty()
+                    || zone.getDistrict().equals("Không xác định")) {
                 if (zone.getCenterPoint() != null) {
                     double lat = zone.getCenterPoint().getY();
                     double lng = zone.getCenterPoint().getX();
@@ -429,9 +444,12 @@ public class FloodReportService {
                         JsonNode addressNode = root.path("address");
                         if (!addressNode.isMissingNode()) {
                             String district = addressNode.path("city_district").asText(null);
-                            if (district == null) district = addressNode.path("county").asText(null);
-                            if (district == null) district = addressNode.path("suburb").asText(null);
-                            if (district == null) district = addressNode.path("state_district").asText(null);
+                            if (district == null)
+                                district = addressNode.path("county").asText(null);
+                            if (district == null)
+                                district = addressNode.path("suburb").asText(null);
+                            if (district == null)
+                                district = addressNode.path("state_district").asText(null);
                             zone.setDistrict(district != null ? district : "Không xác định");
                             zoneRepository.save(zone);
                         }
